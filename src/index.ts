@@ -109,6 +109,39 @@ function setupSupabaseListeners() {
       }
     )
     .subscribe();
+
+  // Listen to Supabase Realtime for NEW SIGNALS (Open Position)
+  supabase
+    .channel('engulfing_signals_changes')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'engulfing_signals' },
+      async (payload) => {
+        const signal = payload.new;
+        console.log(`New OP signal detected! Symbol: ${signal.symbol}`);
+        
+        try {
+          const isBuy = signal.pattern_type === 'bullish_engulfing';
+          const mode = isBuy ? 'BUY' : 'SELL';
+          const modeEmoji = isBuy ? '🟢' : '🔴';
+          
+          // Memperkirakan OP, SL, TP (Berdasarkan harga close candle terakhir)
+          const opPrice = signal.curr_close.toFixed(2);
+          const slPrice = isBuy ? signal.curr_low.toFixed(2) : signal.curr_high.toFixed(2);
+          
+          const caption = `⚠️ *NEW OPEN POSITION* ⚠️\n\n*${modeEmoji} ${mode} SIGNAL*\n🔸 *Pair:* ${signal.symbol}\n🔸 *Timeframe:* ${signal.timeframe}\n\n🎯 *Entry:* ${opPrice}\n🛡️ *SL Area:* ${slPrice}\n🧠 *Confidence:* ${signal.confidence_score}%`;
+          
+          if (sock) {
+            console.log(`Mengirim notifikasi OP ke grup ${GROUP_JID}...`);
+            await sock.sendMessage(GROUP_JID, { text: caption });
+            console.log(`✅ Sukses! Notifikasi OP berhasil dikirim ke grup.`);
+          }
+        } catch (error) {
+          console.error('Error sending OP message:', error);
+        }
+      }
+    )
+    .subscribe();
 }
 
 setupSupabaseListeners();
