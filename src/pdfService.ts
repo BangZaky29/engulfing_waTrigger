@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { format } from 'date-fns';
+import { format, subHours } from 'date-fns';
 
 dotenv.config();
 
@@ -20,9 +20,9 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
     const { data: trades, error } = await supabase
       .from('trade_deep_analytics_view')
       .select('*')
-      .gte('entry_time', dateStart.toISOString())
-      .lt('entry_time', dateEnd.toISOString())
-      .order('entry_time', { ascending: true });
+      .gte('trade_created_at', dateStart.toISOString())
+      .lt('trade_created_at', dateEnd.toISOString())
+      .order('trade_created_at', { ascending: true });
 
     if (error) throw error;
 
@@ -36,7 +36,7 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
       if (t.result === 'PROFIT') wins++;
       return {
         ...t,
-        formattedTime: t.entry_time ? format(new Date(t.entry_time), 'dd MMM HH:mm') : '-',
+        formattedTime: t.entry_time ? format(subHours(new Date(t.entry_time), 3), 'dd MMM HH:mm') : '-',
       };
     });
 
@@ -60,8 +60,13 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
 
     // 3. Render HTML
     const templatePath = path.join(__dirname, 'templates', 'reportTemplate.ejs');
+    
+    // Format period range
+    const periodRange = `${format(dateStart, 'dd MMM yyyy HH:mm')} - ${format(dateEnd, 'dd MMM yyyy HH:mm')}`;
+
     const htmlString = await ejs.renderFile(templatePath, {
       reportTitle,
+      periodRange,
       currentDate: format(new Date(), 'dd MMMM yyyy HH:mm'),
       stats,
       trades: formattedTrades
@@ -124,7 +129,7 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
       `_File PDF Laporan lengkap terlampir._`;
 
     await sock.sendMessage(groupJid, {
-      document: pdfBuffer,
+      document: Buffer.from(pdfBuffer),
       mimetype: 'application/pdf',
       fileName: `Engulfing_${reportType}_Report.pdf`,
       caption: caption

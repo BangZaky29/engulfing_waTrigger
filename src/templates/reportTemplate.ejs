@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Trading Report</title>
-    <!-- Menggunakan Tailwind CSS via CDN untuk kemudahan styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a; /* slate-900 */
-            color: #f8fafc; /* slate-50 */
+            background-color: #ffffff;
+            color: #1f2937; /* gray-800 */
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         .page-break {
             page-break-before: always;
@@ -26,89 +26,89 @@
         thead {
             display: table-header-group;
         }
-        tfoot {
-            display: table-footer-group;
-        }
     </style>
 </head>
-<body class="p-8 antialiased">
+<body class="p-10 antialiased max-w-4xl mx-auto">
     
-    <!-- Header Laporan -->
-    <div class="border-b border-slate-700 pb-6 mb-8 flex justify-between items-end">
+    <!-- Header Minimalis -->
+    <div class="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-8">
         <div>
-            <h1 class="text-4xl font-bold text-sky-400 mb-2">ENGULFING ANALYTICS</h1>
-            <h2 class="text-2xl text-slate-300"><%= reportTitle %></h2>
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">ENGULFING STRATEGY</h1>
+            <h2 class="text-xl font-medium text-gray-500 mt-1"><%= reportTitle %></h2>
         </div>
-        <div class="text-right">
-            <p class="text-slate-400">Tanggal Cetak:</p>
-            <p class="text-lg font-semibold"><%= currentDate %></p>
+        <div class="text-right text-sm">
+            <p class="text-gray-500 font-medium uppercase tracking-wider text-xs">Tanggal Cetak</p>
+            <p class="font-semibold text-gray-800"><%= currentDate %></p>
         </div>
     </div>
 
-    <!-- Ringkasan Eksekutif -->
-    <div class="grid grid-cols-4 gap-4 mb-8">
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg text-center">
-            <p class="text-slate-400 text-sm mb-1">Total Trading</p>
-            <p class="text-3xl font-bold text-white"><%= stats.totalTrades %></p>
+    <!-- Ringkasan Eksekutif Minimalis -->
+    <div class="grid grid-cols-4 gap-6 mb-10">
+        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Total Sinyal</p>
+            <p class="text-3xl font-bold text-gray-900"><%= stats.totalTrades %></p>
         </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg text-center">
-            <p class="text-slate-400 text-sm mb-1">Akurasi (Win Rate)</p>
-            <p class="text-3xl font-bold <%= stats.winRate >= 50 ? 'text-emerald-400' : 'text-rose-400' %>">
+        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Win Rate</p>
+            <p class="text-3xl font-bold <%= stats.winRate >= 50 ? 'text-green-600' : 'text-red-600' %>">
                 <%= stats.winRate.toFixed(1) %>%
             </p>
         </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg text-center">
-            <p class="text-slate-400 text-sm mb-1">Total Profit</p>
-            <p class="text-3xl font-bold text-emerald-400">
+        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Profit Kotor</p>
+            <p class="text-3xl font-bold text-gray-900">
                 $<%= stats.totalProfit.toFixed(2) %>
             </p>
         </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg text-center">
-            <p class="text-slate-400 text-sm mb-1">Keuntungan Bersih</p>
-            <p class="text-3xl font-bold <%= stats.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400' %>">
+        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Profit Bersih</p>
+            <p class="text-3xl font-bold <%= stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600' %>">
                 $<%= stats.netProfit.toFixed(2) %>
             </p>
         </div>
     </div>
 
-    <!-- Tabel Rincian Transaksi -->
-    <h3 class="text-xl font-semibold mb-4 text-slate-200">Rincian Transaksi</h3>
+    <!-- Tabel Rincian -->
+    <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-gray-800">Catatan Transaksi</h3>
+        <span class="text-xs text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full"><%= periodRange %></span>
+    </div>
     
-    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg mb-8">
-        <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-900 text-slate-400 font-semibold uppercase text-xs">
+    <div class="border border-gray-200 rounded-lg overflow-hidden mb-10">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-100 text-gray-600 font-semibold text-xs uppercase tracking-wider">
                 <tr>
-                    <th class="px-6 py-4 border-b border-slate-700">Waktu (WIB)</th>
-                    <th class="px-6 py-4 border-b border-slate-700">Simbol / TF</th>
-                    <th class="px-6 py-4 border-b border-slate-700">Mode</th>
-                    <th class="px-6 py-4 border-b border-slate-700">Rasio Engulf</th>
-                    <th class="px-6 py-4 border-b border-slate-700 text-right">Profit / Loss</th>
+                    <th class="px-5 py-3 border-b border-gray-200">Waktu (WIB)</th>
+                    <th class="px-5 py-3 border-b border-gray-200">Simbol</th>
+                    <th class="px-5 py-3 border-b border-gray-200">TF</th>
+                    <th class="px-5 py-3 border-b border-gray-200">Mode</th>
+                    <th class="px-5 py-3 border-b border-gray-200">Rasio</th>
+                    <th class="px-5 py-3 border-b border-gray-200 text-right">Hasil ($)</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-700">
+            <tbody class="divide-y divide-gray-200 bg-white">
                 <% if (trades.length === 0) { %>
                     <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">
-                            Tidak ada sinyal trading pada periode ini.
+                        <td colspan="6" class="px-5 py-8 text-center text-gray-500 font-medium">
+                            Tidak ada transaksi pada periode ini.
                         </td>
                     </tr>
                 <% } else { %>
                     <% trades.forEach(function(trade) { %>
-                        <tr class="hover:bg-slate-750">
-                            <td class="px-6 py-4"><%= trade.formattedTime %></td>
-                            <td class="px-6 py-4 font-semibold text-white">
-                                <%= trade.symbol %> <span class="text-xs text-slate-400 font-normal ml-1"><%= trade.timeframe %></span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-bold rounded bg-slate-900 border <%= trade.mode === 'BUY' ? 'text-emerald-400 border-emerald-900/50' : 'text-rose-400 border-rose-900/50' %>">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-5 py-3 text-gray-600"><%= trade.formattedTime %></td>
+                            <td class="px-5 py-3 font-semibold text-gray-800"><%= trade.symbol %></td>
+                            <td class="px-5 py-3 text-gray-500"><%= trade.timeframe %></td>
+                            <td class="px-5 py-3">
+                                <span class="px-2 py-0.5 text-xs font-bold rounded-md <%= trade.mode === 'BUY' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200' %>">
                                     <%= trade.mode %>
                                 </span>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-5 py-3 text-gray-600 font-medium">
                                 <%= trade.engulf_ratio ? trade.engulf_ratio.toFixed(2) + 'x' : '-' %>
                             </td>
-                            <td class="px-6 py-4 text-right font-mono font-bold <%= trade.profit >= 0 ? 'text-emerald-400' : 'text-rose-400' %>">
-                                <%= trade.profit >= 0 ? '+' : '' %>$<%= trade.profit.toFixed(2) %>
+                            <td class="px-5 py-3 text-right font-mono font-bold <%= trade.profit >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                                <%= trade.profit >= 0 ? '+' : '' %><%= trade.profit.toFixed(2) %>
                             </td>
                         </tr>
                     <% }); %>
@@ -117,26 +117,10 @@
         </table>
     </div>
 
-    <!-- Halaman Screenshot Lampiran (Opsional, jika ada gambar) -->
-    <% if (trades.length > 0) { %>
-        <div class="page-break"></div>
-        <h3 class="text-xl font-semibold mb-6 text-slate-200">Lampiran Bukti Transaksi</h3>
-        <div class="grid grid-cols-2 gap-6">
-            <% trades.forEach(function(trade, index) { %>
-                <% if (trade.image_url) { %>
-                    <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 shadow-md">
-                        <div class="flex justify-between items-center mb-2 text-xs text-slate-400">
-                            <span>#<%= index + 1 %> - <%= trade.symbol %> (<%= trade.mode %>)</span>
-                            <span class="<%= trade.profit >= 0 ? 'text-emerald-400' : 'text-rose-400' %> font-bold">
-                                $<%= trade.profit.toFixed(2) %>
-                            </span>
-                        </div>
-                        <img src="<%= trade.image_url %>" class="w-full h-auto rounded border border-slate-700" alt="Trade Screenshot">
-                    </div>
-                <% } %>
-            <% }); %>
-        </div>
-    <% } %>
+    <!-- Footer minimalis -->
+    <div class="mt-12 pt-4 border-t border-gray-200 text-center text-xs text-gray-400 font-medium">
+        Laporan ini digenerate secara otomatis oleh sistem Engulfing Analytics.
+    </div>
 
 </body>
 </html>
