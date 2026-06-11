@@ -1,0 +1,21 @@
+{
+  "name": "wa_trigger",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot Trigger with Supabase",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@whiskeysockets/baileys": "^6.6.0",
+    "dotenv": "^16.3.1",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
