@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import pino from 'pino';
 import { useSupabaseAuthState } from './supabaseAuthState';
+import { startCronJobs } from './cronScheduler';
+import { generateAndSendPDF } from './pdfService';
 
 dotenv.config();
 
@@ -145,4 +147,29 @@ function setupSupabaseListeners() {
 }
 
 setupSupabaseListeners();
-connectToWhatsApp();
+connectToWhatsApp().then(() => {
+  // Start Cron Jobs once connected
+  startCronJobs(sock, GROUP_JID);
+});
+
+// Handler untuk SIGINT (Ctrl+C)
+process.on('SIGINT', async () => {
+  console.log('\n[SYSTEM] Menerima sinyal Shutdown (Ctrl+C)...');
+  console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
+  
+  if (sock && GROUP_JID) {
+    try {
+      // Kita kirim laporan hari ini sejak jam 00:00 sampai saat ini
+      const end = new Date();
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      
+      await generateAndSendPDF(sock, 'SHUTDOWN', GROUP_JID, start, end);
+    } catch (e) {
+      console.error('[SYSTEM] Gagal mengirim Shutdown Report:', e);
+    }
+  }
+  
+  console.log('[SYSTEM] Keluar dari proses. Sampai jumpa!');
+  process.exit(0);
+});
