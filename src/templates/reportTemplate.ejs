@@ -1,126 +1,455 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <title>Trading Report</title>
+    <title>Trading Report — Engulfing Strategy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #ffffff;
-            color: #1f2937; /* gray-800 */
+            background-color: #f8fafc;
+            color: #1e293b;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .page-break {
-            page-break-before: always;
-        }
+
+        /* ── Print helpers ── */
         table {
             page-break-inside: auto;
         }
+
         tr {
             page-break-inside: avoid;
             page-break-after: auto;
         }
+
         thead {
             display: table-header-group;
         }
+
+        .no-break {
+            page-break-inside: avoid;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* ── Custom badge colours ── */
+        .badge-green {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-yellow {
+            background: #fef9c3;
+            color: #a16207;
+            border: 1px solid #fde047;
+        }
+
+        .badge-red {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+
+        .badge-gray {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .perf-green {
+            color: #16a34a;
+        }
+
+        .perf-yellow {
+            color: #ca8a04;
+        }
+
+        .perf-red {
+            color: #dc2626;
+        }
+
+        .perf-gray {
+            color: #64748b;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .card-accent {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 18px;
+            color: #f8fafc;
+        }
+
+        /* ── Progress bar ── */
+        .bar-track {
+            background: #e2e8f0;
+            border-radius: 99px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .bar-fill-green {
+            background: #22c55e;
+            height: 100%;
+            border-radius: 99px;
+        }
+
+        .bar-fill-red {
+            background: #ef4444;
+            height: 100%;
+            border-radius: 99px;
+        }
+
+        /* ── Table ── */
+        .trade-table th {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 10px 14px;
+        }
+
+        .trade-table td {
+            padding: 10px 14px;
+            font-size: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .trade-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .trade-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 20px 0;
+        }
     </style>
 </head>
-<body class="p-10 antialiased max-w-4xl mx-auto">
-    
-    <!-- Header Minimalis -->
-    <div class="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">ENGULFING STRATEGY</h1>
-            <h2 class="text-xl font-medium text-gray-500 mt-1"><%= reportTitle %></h2>
-        </div>
-        <div class="text-right text-sm">
-            <p class="text-gray-500 font-medium uppercase tracking-wider text-xs">Tanggal Cetak</p>
-            <p class="font-semibold text-gray-800"><%= currentDate %></p>
+
+<body class="p-8 max-w-4xl mx-auto">
+
+    <!-- ════════════════════════════════════════
+         HEADER
+    ═══════════════════════════════════════════ -->
+    <div class="no-break">
+        <div class="card-accent mb-2 flex justify-between items-center">
+            <div>
+                <p class="text-xs uppercase tracking-widest text-slate-400 mb-1">Engulfing Strategy · Auto Report</p>
+                <h1 class="text-2xl font-bold text-white">
+                    <%= reportTitle %>
+                </h1>
+                <p class="text-sm text-slate-300 mt-1">
+                    🕐 Sesi:&nbsp;
+                    <span class="font-semibold text-white">
+                        <%= sessionStart %>
+                    </span>
+                    &nbsp;→&nbsp;
+                    <span class="font-semibold text-white">
+                        <%= sessionEnd %>
+                    </span>
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Dicetak</p>
+                <p class="text-sm font-semibold text-white">
+                    <%= currentDate %>
+                </p>
+                <% const badgeCls=stats.performanceColor==='green' ? 'badge-green' : stats.performanceColor==='yellow'
+                    ? 'badge-yellow' : stats.performanceColor==='red' ? 'badge-red' : 'badge-gray' ; %>
+                    <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold <%= badgeCls %>">
+                        <%= stats.performanceLevel %>
+                    </span>
+            </div>
         </div>
     </div>
 
-    <!-- Ringkasan Eksekutif Minimalis -->
-    <div class="grid grid-cols-4 gap-6 mb-10">
-        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
-            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Total Sinyal</p>
-            <p class="text-3xl font-bold text-gray-900"><%= stats.totalTrades %></p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
-            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Win Rate</p>
-            <p class="text-3xl font-bold <%= stats.winRate >= 50 ? 'text-green-600' : 'text-red-600' %>">
-                <%= stats.winRate.toFixed(1) %>%
+    <!-- ════════════════════════════════════════
+         ROW 1 — TRADE SUMMARY (4 cards)
+    ═══════════════════════════════════════════ -->
+    <div class="no-break grid grid-cols-4 gap-4 mb-4">
+
+        <!-- Total Trade -->
+        <div class="card text-center">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Total Trade</p>
+            <p class="text-4xl font-extrabold text-slate-800">
+                <%= stats.totalTrades %>
             </p>
+            <p class="text-xs text-slate-400 mt-1">sinyal dieksekusi</p>
         </div>
-        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
-            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Profit Kotor</p>
-            <p class="text-3xl font-bold text-gray-900">
-                $<%= stats.totalProfit.toFixed(2) %>
+
+        <!-- Profit -->
+        <div class="card text-center">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">✅ Profit</p>
+            <p class="text-4xl font-extrabold text-green-600">
+                <%= stats.wins %>
             </p>
+            <p class="text-xs text-slate-400 mt-1">trade winner</p>
         </div>
-        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
-            <p class="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Profit Bersih</p>
-            <p class="text-3xl font-bold <%= stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600' %>">
-                $<%= stats.netProfit.toFixed(2) %>
+
+        <!-- Loss -->
+        <div class="card text-center">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">❌ Loss</p>
+            <p class="text-4xl font-extrabold text-red-500">
+                <%= stats.losses %>
             </p>
+            <p class="text-xs text-slate-400 mt-1">trade loser</p>
+        </div>
+
+        <!-- Win Rate + Bar -->
+        <div class="card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Win Rate</p>
+            <p
+                class="text-4xl font-extrabold <%= stats.winRate >= 60 ? 'text-green-600' : stats.winRate >= 40 ? 'text-yellow-500' : 'text-red-500' %>">
+                <%= stats.totalTrades> 0 ? stats.winRate.toFixed(1) : '—' %><% if (stats.totalTrades> 0) { %>%<% } %>
+            </p>
+            <% if (stats.totalTrades > 0) { %>
+            <div class="bar-track mt-3">
+                <div class="bar-fill-green" id="bar-wr"></div>
+            </div>
+            <script>document.getElementById('bar-wr').style.width='<%= Math.min(stats.winRate, 100).toFixed(1) %>%';</script>
+            <p class="text-xs text-slate-400 mt-1"><%= stats.wins %> W / <%= stats.losses %> L</p>
+            <% } %>
         </div>
     </div>
 
-    <!-- Tabel Rincian -->
-    <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-lg font-bold text-gray-800">Catatan Transaksi</h3>
-        <span class="text-xs text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full"><%= periodRange %></span>
+    <!-- ════════════════════════════════════════
+         ROW 2 — FINANCIAL SUMMARY (4 cards)
+    ═══════════════════════════════════════════ -->
+    <div class="no-break grid grid-cols-4 gap-4 mb-4">
+
+        <!-- Gross Profit -->
+        <div class="card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Gross Profit</p>
+            <p class="text-2xl font-bold text-green-600">+$<%= stats.grossProfit.toFixed(2) %>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">total dari <%= stats.wins %> winner</p>
+        </div>
+
+        <!-- Gross Loss -->
+        <div class="card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Gross Loss</p>
+            <p class="text-2xl font-bold text-red-500">-$<%= stats.grossLoss.toFixed(2) %>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">total dari <%= stats.losses %> loser</p>
+        </div>
+
+        <!-- Net P&L -->
+        <div class="card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Net P&amp;L</p>
+            <p class="text-2xl font-bold <%= stats.netProfit >= 0 ? 'text-green-600' : 'text-red-500' %>">
+                <%= stats.netProfit>= 0 ? '+' : '' %>$<%= stats.netProfit.toFixed(2) %>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">setelah dipotong loss</p>
+        </div>
+
+        <!-- Avg / Trade -->
+        <div class="card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Avg / Trade</p>
+            <p class="text-2xl font-bold <%= stats.avgProfit >= 0 ? 'text-slate-700' : 'text-red-500' %>">
+                <%= stats.avgProfit>= 0 ? '+' : '' %>$<%= stats.avgProfit.toFixed(2) %>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">rata-rata per sinyal</p>
+        </div>
     </div>
-    
-    <div class="border border-gray-200 rounded-lg overflow-hidden mb-10">
-        <table class="w-full text-left text-sm">
-            <thead class="bg-gray-100 text-gray-600 font-semibold text-xs uppercase tracking-wider">
-                <tr>
-                    <th class="px-5 py-3 border-b border-gray-200">Waktu (WIB)</th>
-                    <th class="px-5 py-3 border-b border-gray-200">Simbol</th>
-                    <th class="px-5 py-3 border-b border-gray-200">TF</th>
-                    <th class="px-5 py-3 border-b border-gray-200">Mode</th>
-                    <th class="px-5 py-3 border-b border-gray-200">Rasio</th>
-                    <th class="px-5 py-3 border-b border-gray-200 text-right">Hasil ($)</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-                <% if (trades.length === 0) { %>
-                    <tr>
-                        <td colspan="6" class="px-5 py-8 text-center text-gray-500 font-medium">
-                            Tidak ada transaksi pada periode ini.
-                        </td>
-                    </tr>
-                <% } else { %>
-                    <% trades.forEach(function(trade) { %>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-5 py-3 text-gray-600"><%= trade.formattedTime %></td>
-                            <td class="px-5 py-3 font-semibold text-gray-800"><%= trade.symbol %></td>
-                            <td class="px-5 py-3 text-gray-500"><%= trade.timeframe %></td>
-                            <td class="px-5 py-3">
-                                <span class="px-2 py-0.5 text-xs font-bold rounded-md <%= trade.mode === 'BUY' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200' %>">
-                                    <%= trade.mode %>
-                                </span>
-                            </td>
-                            <td class="px-5 py-3 text-gray-600 font-medium">
-                                <%= trade.engulf_ratio ? trade.engulf_ratio.toFixed(2) + 'x' : '-' %>
-                            </td>
-                            <td class="px-5 py-3 text-right font-mono font-bold <%= trade.profit >= 0 ? 'text-green-600' : 'text-red-600' %>">
-                                <%= trade.profit >= 0 ? '+' : '' %><%= trade.profit.toFixed(2) %>
-                            </td>
+
+    <!-- ════════════════════════════════════════
+         ROW 3 — HIGHLIGHT (Best, Worst, PF, Symbol)
+    ═══════════════════════════════════════════ -->
+    <% if (stats.totalTrades> 0) { %>
+        <div class="no-break grid grid-cols-4 gap-4 mb-4">
+
+            <!-- Best Trade -->
+            <div class="card border-l-4 border-green-400">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">🏆 Best Trade</p>
+                <p class="text-xl font-bold text-green-600">+$<%= stats.bestTrade.toFixed(2) %>
+                </p>
+                <p class="text-xs text-slate-400 mt-1">trade paling profit</p>
+            </div>
+
+            <!-- Worst Trade -->
+            <div class="card border-l-4 border-red-400">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">📉 Worst Trade</p>
+                <p class="text-xl font-bold text-red-500">$<%= stats.worstTrade.toFixed(2) %>
+                </p>
+                <p class="text-xs text-slate-400 mt-1">trade paling rugi</p>
+            </div>
+
+            <!-- Profit Factor -->
+            <div
+                class="card border-l-4 <%= stats.profitFactor >= 1.5 ? 'border-green-400' : stats.profitFactor >= 1 ? 'border-yellow-400' : 'border-red-400' %>">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">⚡ Profit Factor</p>
+                <p
+                    class="text-xl font-bold <%= stats.profitFactor >= 1.5 ? 'text-green-600' : stats.profitFactor >= 1 ? 'text-yellow-500' : 'text-red-500' %>">
+                    <%= stats.profitFactor===999 ? '∞' : stats.profitFactor.toFixed(2) %>x
+                </p>
+                <p class="text-xs text-slate-400 mt-1">
+                    <%= stats.profitFactor>= 1.5 ? 'Sangat Sehat' : stats.profitFactor >= 1 ? 'Marginal' : 'Merugi' %>
+                </p>
+            </div>
+
+            <!-- Most Active Symbol -->
+            <div class="card border-l-4 border-blue-400">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">🔥 Pair Aktif</p>
+                <p class="text-xl font-bold text-blue-600">
+                    <%= stats.mostActive ? stats.mostActive.sym : '—' %>
+                </p>
+                <p class="text-xs text-slate-400 mt-1">
+                    <%= stats.mostActive ? stats.mostActive.count + ' trade' : 'tidak ada data' %>
+                </p>
+            </div>
+        </div>
+        <% } %>
+
+            <!-- ════════════════════════════════════════
+         ANALISA OTOMATIS
+    ═══════════════════════════════════════════ -->
+            <div class="no-break card mb-4">
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">🤖</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-700 mb-1">Analisa Otomatis Sesi Ini</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            <%= stats.analysisSummary %>
+                        </p>
+                        <% if (stats.analysisPoints.length> 0) { %>
+                            <ul class="mt-3 space-y-1">
+                                <% stats.analysisPoints.forEach(function(point) { %>
+                                    <li class="text-xs text-slate-500 flex items-start gap-2">
+                                        <span class="text-slate-300 mt-0.5">▸</span>
+                                        <span>
+                                            <%= point %>
+                                        </span>
+                                    </li>
+                                    <% }); %>
+                            </ul>
+                            <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════
+         TABEL TRANSAKSI LENGKAP
+    ═══════════════════════════════════════════ -->
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">📋 Catatan Transaksi Lengkap</h3>
+                <span
+                    class="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                    <%= periodRange %>
+                </span>
+            </div>
+
+            <div class="border border-slate-200 rounded-xl overflow-hidden mb-8">
+                <table class="w-full text-left trade-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Waktu (WIB)</th>
+                            <th>Simbol</th>
+                            <th>TF</th>
+                            <th>Mode</th>
+                            <th>Rasio</th>
+                            <th>Hasil</th>
+                            <th class="text-right">Profit ($)</th>
                         </tr>
-                    <% }); %>
-                <% } %>
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    <tbody class="bg-white">
+                        <% if (trades.length===0) { %>
+                            <tr>
+                                <td colspan="8" class="text-center text-slate-400 py-10 font-medium">
+                                    Tidak ada transaksi pada sesi ini.
+                                </td>
+                            </tr>
+                            <% } else { %>
+                                <% trades.forEach(function(trade, idx) { %>
+                                    <tr>
+                                        <td class="text-slate-400 font-mono text-xs">
+                                            <%= idx + 1 %>
+                                        </td>
+                                        <td class="text-slate-600">
+                                            <%= trade.formattedTime %>
+                                        </td>
+                                        <td class="font-semibold text-slate-800">
+                                            <%= trade.symbol %>
+                                        </td>
+                                        <td class="text-slate-500">
+                                            <%= trade.timeframe %>
+                                        </td>
+                                        <td>
+                                            <span class="px-2 py-0.5 text-xs font-bold rounded-md
+                                    <%= trade.mode === 'BUY'
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                        : 'bg-red-50 text-red-700 border border-red-200' %>">
+                                                <%= trade.mode %>
+                                            </span>
+                                        </td>
+                                        <td class="text-slate-600 font-medium text-xs">
+                                            <%= trade.engulf_ratio ? trade.engulf_ratio.toFixed(2) + 'x' : '—' %>
+                                        </td>
+                                        <td>
+                                            <span class="px-2 py-0.5 text-xs font-bold rounded-md
+                                    <%= trade.result === 'PROFIT'
+                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                        : 'bg-red-50 text-red-700 border border-red-200' %>">
+                                                <%= trade.result %>
+                                            </span>
+                                        </td>
+                                        <td class="text-right font-mono font-bold
+                                <%= trade.profit >= 0 ? 'text-green-600' : 'text-red-500' %>">
+                                            <%= trade.profit>= 0 ? '+' : '' %><%= trade.profit ? trade.profit.toFixed(2)
+                                                    : '0.00' %>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                        <% } %>
+                    </tbody>
+                    <% if (trades.length> 0) { %>
+                        <tfoot>
+                            <tr style="background:#f8fafc; border-top:2px solid #e2e8f0;">
+                                <td colspan="7"
+                                    class="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Total
+                                    Net P&amp;L</td>
+                                <td class="px-4 py-3 text-right font-mono font-extrabold text-base
+                        <%= stats.netProfit >= 0 ? 'text-green-600' : 'text-red-500' %>">
+                                    <%= stats.netProfit>= 0 ? '+' : '' %>$<%= stats.netProfit.toFixed(2) %>
+                                </td>
+                            </tr>
+                        </tfoot>
+                        <% } %>
+                </table>
+            </div>
 
-    <!-- Footer minimalis -->
-    <div class="mt-12 pt-4 border-t border-gray-200 text-center text-xs text-gray-400 font-medium">
-        Laporan ini digenerate secara otomatis oleh sistem Engulfing Analytics.
-    </div>
+            <!-- ════════════════════════════════════════
+         FOOTER
+    ═══════════════════════════════════════════ -->
+            <div class="text-center text-xs text-slate-400 font-medium pt-4 border-t border-slate-200">
+                Laporan ini digenerate otomatis oleh sistem <strong>Engulfing Analytics</strong> ·
+                Sesi: <%= periodRange %>
+            </div>
 
 </body>
+
 </html>

@@ -14,6 +14,9 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
 const GROUP_JID = process.env.GROUP_JID!;
 const SESSION_ID = 'main_session';
 
+// ✅ Catat TEPAT saat sistem pertama kali dijalankan
+const SESSION_START_TIME = new Date();
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const logger = pino({ level: 'silent' });
 
@@ -154,17 +157,17 @@ connectToWhatsApp().then(() => {
 
 // Handler untuk SIGINT (Ctrl+C)
 process.on('SIGINT', async () => {
+  const shutdownTime = new Date();
+  
   console.log('\n[SYSTEM] Menerima sinyal Shutdown (Ctrl+C)...');
+  console.log(`[SYSTEM] Sesi berjalan dari ${SESSION_START_TIME.toLocaleTimeString('id-ID')} → ${shutdownTime.toLocaleTimeString('id-ID')}`);
   console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
   
   if (sock && GROUP_JID) {
     try {
-      // Kita kirim laporan hari ini sejak jam 00:00 sampai saat ini
-      const end = new Date();
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      
-      await generateAndSendPDF(sock, 'SHUTDOWN', GROUP_JID, start, end);
+      // ✅ Range data = dari jam sistem pertama jalan sampai sekarang
+      // Bukan dari jam 00:00, tapi dari SESSION_START_TIME
+      await generateAndSendPDF(sock, 'SHUTDOWN', GROUP_JID, SESSION_START_TIME, shutdownTime);
     } catch (e) {
       console.error('[SYSTEM] Gagal mengirim Shutdown Report:', e);
     }
