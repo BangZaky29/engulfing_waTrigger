@@ -4,6 +4,7 @@ import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { format, subHours } from 'date-fns';
+import { getGeminiInsight } from './geminiService';
 
 dotenv.config();
 
@@ -84,44 +85,66 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
     const mostProfit = symbolList.sort((a, b) => b.profit - a.profit)[0] || null;
 
     // =====================================================
-    // Analisa Otomatis (teks simpel berdasarkan data)
+    // Performance Level (badge header)
     // =====================================================
     let performanceLevel = 'PERLU EVALUASI';
     let performanceColor = 'red';
-    let analysisSummary = '';
 
     if (totalTrades === 0) {
       performanceLevel = 'TIDAK ADA DATA';
       performanceColor = 'gray';
-      analysisSummary = 'Tidak ada transaksi yang tercatat pada sesi ini.';
     } else if (winRate >= 65 && netProfit > 0) {
       performanceLevel = 'PERFORMA BAGUS';
       performanceColor = 'green';
-      analysisSummary = `Sesi ini berjalan sangat baik dengan win rate ${winRate.toFixed(1)}% dan profit bersih $${netProfit.toFixed(2)}. ` +
-        `Strategy engulfing bekerja efektif${mostProfit ? ` terutama pada pair ${mostProfit.sym}` : ''}.`;
     } else if (winRate >= 45) {
       performanceLevel = 'PERFORMA CUKUP';
       performanceColor = 'yellow';
-      analysisSummary = `Sesi ini menunjukkan performa yang cukup dengan win rate ${winRate.toFixed(1)}%. ` +
-        `${netProfit >= 0 ? `Net profit positif sebesar $${netProfit.toFixed(2)}` : `Net profit negatif $${netProfit.toFixed(2)}, perlu perhatian lebih`}.`;
     } else {
       performanceLevel = 'PERLU EVALUASI';
       performanceColor = 'red';
-      analysisSummary = `Win rate ${winRate.toFixed(1)}% berada di bawah threshold minimal. ` +
-        `Net P&L: $${netProfit.toFixed(2)}. Disarankan untuk review parameter strategy dan kondisi market.`;
     }
 
-    // Tambahan analisa detail
-    const analysisPoints: string[] = [];
-    if (totalTrades > 0) {
-      analysisPoints.push(`Dari ${totalTrades} sinyal, ${wins} profit dan ${losses} loss.`);
-      if (profitFactor > 0 && grossLoss > 0) {
-        analysisPoints.push(`Profit Factor: ${profitFactor.toFixed(2)}x (${profitFactor >= 1.5 ? 'Sehat' : profitFactor >= 1 ? 'Marginal' : 'Merugi'}).`);
-      }
-      if (bestTrade > 0) analysisPoints.push(`Trade terbaik: +$${bestTrade.toFixed(2)}.`);
-      if (worstTrade < 0) analysisPoints.push(`Trade terburuk: $${worstTrade.toFixed(2)}.`);
-      if (mostActive) analysisPoints.push(`Pair paling aktif: ${mostActive.sym} (${mostActive.count} trade).`);
-    }
+    // =====================================================
+    // Gemini AI Insight
+    // =====================================================
+    console.log('[PDF] Meminta insight dari Gemini AI...');
+    const geminiInsight = await getGeminiInsight(
+      {
+        totalTrades,
+        wins,
+        losses,
+        winRate,
+        netProfit,
+        grossProfit,
+        grossLoss,
+        profitFactor,
+        bestTrade,
+        worstTrade,
+        avgProfit,
+        mostActive,
+        mostProfit,
+        reportType,
+      },
+      formattedTrades
+    );
+
+    // Kalkulasi variabel sentiment untuk template (hindari logic JS di EJS)
+    const sentiment = geminiInsight.sentiment;
+    const sentimentGradient =
+      sentiment === 'positive' ? 'linear-gradient(135deg, #0f4c2a 0%, #1a6b3a 100%)'
+      : sentiment === 'warning'  ? 'linear-gradient(135deg, #4a3000 0%, #6b4500 100%)'
+      : sentiment === 'critical' ? 'linear-gradient(135deg, #4a0000 0%, #6b1a1a 100%)'
+      :                            'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
+    const sentimentAccent =
+      sentiment === 'positive' ? '#22c55e'
+      : sentiment === 'warning'  ? '#f59e0b'
+      : sentiment === 'critical' ? '#ef4444'
+      :                            '#818cf8';
+    const sentimentLabel =
+      sentiment === 'positive' ? '✅ Positif'
+      : sentiment === 'warning'  ? '⚠️ Waspada'
+      : sentiment === 'critical' ? '🚨 Kritis'
+      :                            '🔵 Netral';
 
     const stats = {
       totalTrades,
@@ -139,8 +162,12 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
       mostProfit,
       performanceLevel,
       performanceColor,
-      analysisSummary,
-      analysisPoints,
+      // AI-powered insight (menggantikan analisa statis)
+      aiInsight: geminiInsight,
+      // Variabel sentiment siap pakai untuk template
+      sentimentGradient,
+      sentimentAccent,
+      sentimentLabel,
     };
 
     // =====================================================

@@ -21,6 +21,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const logger = pino({ level: 'silent' });
 
 let sock: any = null;
+let isFirstConnect = true; // flag agar startup notif hanya kirim sekali
 
 async function connectToWhatsApp() {
   console.log('Starting WhatsApp Trigger Bot...');
@@ -64,6 +65,33 @@ async function connectToWhatsApp() {
         .from('whatsapp_sessions')
         .update({ status: 'CONNECTED', qr_code: null })
         .eq('id', SESSION_ID);
+
+      // Kirim notifikasi startup hanya pada koneksi pertama
+      if (isFirstConnect && GROUP_JID) {
+        isFirstConnect = false;
+        const now = new Date();
+        const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const tgl = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+        const startupMsg =
+          `🟢 *SISTEM AKTIF* 🟢\n\n` +
+          `🤖 *Engulfing Analytics Bot* telah berhasil dinyalakan dan siap beroperasi.\n\n` +
+          `━━━━━━━━━━━━━━━━━\n` +
+          `📅 Tanggal : ${tgl}\n` +
+          `🕐 Waktu   : ${jam} WIB\n` +
+          `━━━━━━━━━━━━━━━━━\n\n` +
+          `✅ Scanner engulfing aktif\n` +
+          `✅ Listener sinyal aktif\n` +
+          `✅ Laporan otomatis terjadwal\n\n` +
+          `_Bot akan mengirim notifikasi setiap ada sinyal baru. Stay tuned!_ 🚀`;
+
+        try {
+          await sock.sendMessage(GROUP_JID, { text: startupMsg });
+          console.log('[STARTUP] Notifikasi startup berhasil dikirim ke grup WA.');
+        } catch (e) {
+          console.error('[STARTUP] Gagal kirim notifikasi startup:', e);
+        }
+      }
     }
   });
 }
