@@ -23,6 +23,7 @@ const logger = pino({ level: 'silent' });
 let sock: any = null;
 let isFirstConnect = true;       // flag startup notif hanya sekali
 let listenersRegistered = false; // flag agar listener Supabase tidak dobel saat reconnect
+let clearAuthState: (() => Promise<void>) | null = null; // expose clearState ke module scope
 
 // =====================================================
 // Helper: delay
@@ -47,10 +48,41 @@ function setupSupabaseListeners() {
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'whatsapp_sessions', filter: 'id=eq.main_session' },
-      (payload) => {
+      async (payload) => {
         if (payload.new.status === 'LOGOUT_REQUESTED') {
-          console.log('Logout requested by Frontend!');
-          if (sock) sock.logout();
+          console.log('[LOGOUT] Logout requested by Frontend! Membersihkan session...');
+
+          // 1. Hapus session_data dari Supabase DULU (ini yang penting)
+          try {
+            if (clearAuthState) {
+              await clearAuthState();
+              console.log('[LOGOUT] ✅ session_data berhasil dihapus dari Supabase.');
+            } else {
+              // Fallback: langsung hapus via supabase client
+              await supabase
+                .from('whatsapp_sessions')
+                .update({ session_data: {}, status: 'UNPAIRED', qr_code: null })
+                .eq('id', 'main_session');
+              console.log('[LOGOUT] ✅ session_data dihapus via fallback.');
+            }
+          } catch (e) {
+            console.error('[LOGOUT] Gagal hapus session_data:', e);
+          }
+
+          // 2. Disconnect socket dari WhatsApp
+          if (sock) {
+            try {
+              await sock.logout();
+              console.log('[LOGOUT] ✅ Socket berhasil logout dari WhatsApp.');
+            } catch (e) {
+              console.warn('[LOGOUT] sock.logout() error (mungkin sudah disconnect):', e);
+            }
+          }
+
+          // 3. Reset flag agar startup notif muncul lagi saat reconnect
+          isFirstConnect = true;
+          listenersRegistered = false;
+          console.log('[LOGOUT] Session bersih. Bot akan request QR code baru...');
         }
       }
     )
@@ -184,6 +216,9 @@ async function connectToWhatsApp() {
   const { state, saveCreds, clearState } = await useSupabaseAuthState(supabase);
   const { version } = await fetchLatestBaileysVersion();
   console.log(`[CONFIG] Baileys version = ${version.join('.')}`);
+
+  // Expose clearState ke module scope agar bisa dipanggil oleh logout handler
+  clearAuthState = clearState;
 
   sock = makeWASocket({
     version,
