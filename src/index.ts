@@ -7,7 +7,10 @@ import { useSupabaseAuthState } from './supabaseAuthState';
 import { startCronJobs } from './cronScheduler';
 import { generateAndSendPDF } from './pdfService';
 
-dotenv.config();
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+dotenv.config({ path: resolve(__dirname, '../.env') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;

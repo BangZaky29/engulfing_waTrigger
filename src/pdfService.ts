@@ -6,7 +6,9 @@ import dotenv from 'dotenv';
 import { format, subHours } from 'date-fns';
 import { getGeminiInsight } from './geminiService';
 
-dotenv.config();
+import { resolve } from 'path';
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
