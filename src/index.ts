@@ -89,7 +89,9 @@ function setupSupabaseListeners() {
         }
       }
     )
-    .subscribe();
+    .subscribe((status: string) => {
+      console.log(`[LISTENER] whatsapp_session_changes subscription status: ${status}`);
+    });
 
   // Listen to Supabase Realtime for new trades (hasil close)
   supabase
@@ -120,7 +122,12 @@ function setupSupabaseListeners() {
         }
       }
     )
-    .subscribe();
+    .subscribe((status: string) => {
+      console.log(`[LISTENER] trade_analytics_changes subscription status: ${status}`);
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[LISTENER] ❌ Gagal subscribe ke trade_analytics! Pastikan table ini terdaftar di PUBLICATION supabase_realtime.');
+      }
+    });
 
   // Listen to Supabase Realtime for NEW SIGNALS (Open Position)
   supabase
@@ -159,9 +166,15 @@ function setupSupabaseListeners() {
         }
       }
     )
-    .subscribe();
+    .subscribe((status: string) => {
+      console.log(`[LISTENER] engulfing_signals_changes subscription status: ${status}`);
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[LISTENER] ❌ Gagal subscribe ke engulfing_signals! Pastikan table ini terdaftar di PUBLICATION supabase_realtime.');
+      }
+    });
 
-  console.log('[LISTENER] ✅ Semua Supabase Realtime listeners aktif.');
+  console.log('[LISTENER] ✅ Semua Supabase Realtime listeners diinisialisasi.');
+
 }
 
 // =====================================================
