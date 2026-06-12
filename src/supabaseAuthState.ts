@@ -1,4 +1,4 @@
-import { BufferJSON, initAuthCreds } from '@whiskeysockets/baileys';
+import { BufferJSON, initAuthCreds, proto } from '@whiskeysockets/baileys';
 import type { AuthenticationState, SignalDataTypeMap } from '@whiskeysockets/baileys';
 
 const SESSION_ID = 'main_session';
@@ -45,18 +45,27 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
   }
 
   // =========================================================
-  // 2. Fungsi simpan state ke Supabase
+  // 2. Fungsi simpan state ke Supabase dengan Write Queue
+  //    (Mencegah race condition ketika multiple keys di-set secara paralel)
   // =========================================================
-  const saveState = async () => {
-    try {
-      const dataToSave = JSON.parse(JSON.stringify({ creds, keys }, BufferJSON.replacer));
-      await supabase
-        .from('whatsapp_sessions')
-        .update({ session_data: dataToSave, updated_at: new Date().toISOString() })
-        .eq('id', SESSION_ID);
-    } catch (e: any) {
-      console.error('[AUTH] Error menyimpan session:', e?.message || e);
-    }
+  let saveQueue: Promise<void> = Promise.resolve();
+
+  const saveState = (): Promise<void> => {
+    saveQueue = saveQueue.then(async () => {
+      try {
+        const dataToSave = JSON.parse(JSON.stringify({ creds, keys }, BufferJSON.replacer));
+        const { error } = await supabase
+          .from('whatsapp_sessions')
+          .update({ session_data: dataToSave, updated_at: new Date().toISOString() })
+          .eq('id', SESSION_ID);
+        if (error) {
+          console.error('[AUTH] Error menyimpan session ke Supabase:', error.message);
+        }
+      } catch (e: any) {
+        console.error('[AUTH] Exception saat menyimpan session:', e?.message || e);
+      }
+    });
+    return saveQueue;
   };
 
   // =========================================================
@@ -66,6 +75,10 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
   const clearState = async () => {
     try {
       console.log('[AUTH] Menghapus session dari Supabase...');
+      
+      // Tunggu antrean simpan selesai dulu agar tidak menimpa hapus
+      await saveQueue;
+
       await supabase
         .from('whatsapp_sessions')
         .update({
@@ -97,9 +110,10 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
           const data: { [key: string]: any } = {};
           for (const id of ids) {
             let value = keys[type]?.[id];
-            // Baileys membutuhkan Uint8Array bukan Buffer untuk app-state-sync-key
+            
+            // Menggunakan protobuf instantiator untuk app-state-sync-key agar valid secara enkripsi
             if (type === 'app-state-sync-key' && value) {
-              value = { ...value, syncKey: new Uint8Array(value.syncKey) };
+              value = proto.Message.AppStateSyncKeyData.fromObject(value);
             }
             data[id] = value;
           }
@@ -117,7 +131,7 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
               }
             }
           }
-          // Save setiap kali keys berubah (Signal Protocol key updates)
+          // Save secara asynchronous, diantre dengan write queue
           saveState();
         },
       },
