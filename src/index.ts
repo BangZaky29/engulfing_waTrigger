@@ -147,7 +147,7 @@ function setupSupabaseListeners() {
           const opPrice = signal.curr_close.toFixed(2);
           const slPrice = isBuy ? signal.curr_low.toFixed(2) : signal.curr_high.toFixed(2);
 
-          const caption =
+          let caption =
             `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
             `*${modeEmoji} ${mode} SIGNAL*\n` +
             `🔸 *Pair:* ${signal.symbol}\n` +
@@ -155,6 +155,41 @@ function setupSupabaseListeners() {
             `🎯 *Entry:* ${opPrice}\n` +
             `🛡️ *SL Area:* ${slPrice}\n` +
             `🧠 *Confidence:* ${signal.confidence_score}%`;
+
+          if (signal.notes) {
+            try {
+              const notesObj = JSON.parse(signal.notes);
+              let emaPosStr = '';
+              if (notesObj.c2_ema_relation === 'above') {
+                emaPosStr = 'Seluruh C2 di atas EMA';
+              } else if (notesObj.c2_ema_relation === 'below') {
+                emaPosStr = 'Seluruh C2 di bawah EMA';
+              } else {
+                emaPosStr = 'Cross (C2 menyentuh EMA)';
+              }
+
+              let closeCoverageStr = '';
+              if (notesObj.c2_close_coverage === 'high_c1') {
+                closeCoverageStr = 'Close C2 menutup High C1 (Strong Buy)';
+              } else if (notesObj.c2_close_coverage === 'low_c1') {
+                closeCoverageStr = 'Close C2 menutup Low C1 (Strong Sell)';
+              } else {
+                closeCoverageStr = 'Close C2 menutup Open C1';
+              }
+
+              caption +=
+                `\n\n━━━━━━━━━━━━━━━━━\n` +
+                `📊 *DETIL SINYAL / FILTER*\n` +
+                `🔹 *EMA Position:* ${emaPosStr}\n` +
+                `🔹 *Ring C2:* ${notesObj.c2_ring_pts} pts\n` +
+                `🔹 *Ketebalan Body:* ${notesObj.c2_body_pts} pts (B: ${notesObj.c2_body_pct}% | W: ${notesObj.c2_wick_pct}%)\n` +
+                `🔹 *Posisi Close C2:* ${closeCoverageStr}\n` +
+                `━━━━━━━━━━━━━━━━━`;
+            } catch (e) {
+              console.log('Notes is not JSON or failed to parse, falling back to raw notes text.');
+              caption += `\n\n📝 *Notes:* ${signal.notes}`;
+            }
+          }
 
           if (sock) {
             console.log(`Mengirim notifikasi OP ke grup ${GROUP_JID}...`);
