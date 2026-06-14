@@ -172,10 +172,10 @@ function setupSupabaseListeners() {
               const cpPct = notesObj.cp_pct || 0;
               const rr = notesObj.rr_ratio || 1.5;
               const slPriceNotes = notesObj.sl_price || slPrice;
-              const slPctEnv = process.env.EXECUTION_SL_PCT || '75';
+              const slPctUsed = notesObj.sl_pct_used !== undefined ? notesObj.sl_pct_used : (process.env.EXECUTION_SL_PCT || '75');
               const ticketId = notesObj.ticket_id || '-';
 
-              const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPriceNotes}`;
+              const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPctUsed}%`;
               const breakdownText = notesObj.score_breakdown ? `\n\n📈 *Score Breakdown:*\n${notesObj.score_breakdown}` : '';
 
               caption =
@@ -184,7 +184,7 @@ function setupSupabaseListeners() {
                 `🔸 *Pair:* ${signal.symbol}\n` +
                 `🔸 *Timeframe:* ${signal.timeframe}\n\n` +
                 `🎯 *Entry:* ${opPrice}\n` +
-                `🛡️ *SL Area:* ${slPriceNotes} (${slPctEnv}%)\n` +
+                `🛡️ *SL Area:* ${slPriceNotes} (${slPctUsed}%)\n` +
                 `🎯 *Target RR:* ${rr}\n` +
                 `🎫 *Ticket:* ${ticketId}\n\n` +
                 `📊 *SUMMARY DATA:*\n` +
