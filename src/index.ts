@@ -147,48 +147,40 @@ function setupSupabaseListeners() {
           const opPrice = signal.curr_close.toFixed(2);
           const slPrice = isBuy ? signal.curr_low.toFixed(2) : signal.curr_high.toFixed(2);
 
-          let caption =
-            `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
-            `*${modeEmoji} ${mode} SIGNAL*\n` +
-            `🔸 *Pair:* ${signal.symbol}\n` +
-            `🔸 *Timeframe:* ${signal.timeframe}\n\n` +
-            `🎯 *Entry:* ${opPrice}\n` +
-            `🛡️ *SL Area:* ${slPrice}\n` +
-            `🧠 *Confidence:* ${signal.confidence_score}%`;
+          let caption = '';
 
           if (signal.notes) {
             try {
               const notesObj = JSON.parse(signal.notes);
-              let emaPosStr = '';
-              if (notesObj.c2_ema_relation === 'above') {
-                emaPosStr = 'Seluruh C2 di atas EMA';
-              } else if (notesObj.c2_ema_relation === 'below') {
-                emaPosStr = 'Seluruh C2 di bawah EMA';
-              } else {
-                emaPosStr = 'Cross (C2 menyentuh EMA)';
-              }
+              
+              // Engulfing | XAUUSD | M5 | BUY REVERSAL | Grade : A | B : 71% | CP : 128% | RR : 1.5 | SL : 75%
+              const actionStr = notesObj.action_str || mode;
+              const grade = notesObj.grade || '-';
+              const bPct = notesObj.body_pct || 0;
+              const cpPct = notesObj.cp_pct || 0;
+              const rr = notesObj.rr_ratio || 1.5;
+              const slPriceNotes = notesObj.sl_price || slPrice;
+              const slPctEnv = process.env.EXECUTION_SL_PCT || '75';
 
-              let closeCoverageStr = '';
-              if (notesObj.c2_close_coverage === 'high_c1') {
-                closeCoverageStr = 'Close C2 menutup High C1 (Strong Buy)';
-              } else if (notesObj.c2_close_coverage === 'low_c1') {
-                closeCoverageStr = 'Close C2 menutup Low C1 (Strong Sell)';
-              } else {
-                closeCoverageStr = 'Close C2 menutup Open C1';
-              }
+              const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPriceNotes}`;
 
-              caption +=
-                `\n\n━━━━━━━━━━━━━━━━━\n` +
-                `📊 *DETIL SINYAL / FILTER*\n` +
-                `🔹 *EMA Position:* ${emaPosStr}\n` +
-                `🔹 *Ring C2:* ${notesObj.c2_ring_pts} pts\n` +
-                `🔹 *Ketebalan Body:* ${notesObj.c2_body_pts} pts (B: ${notesObj.c2_body_pct}% | W: ${notesObj.c2_wick_pct}%)\n` +
-                `🔹 *Posisi Close C2:* ${closeCoverageStr}\n` +
-                `━━━━━━━━━━━━━━━━━`;
+              caption =
+                `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
+                `*${modeEmoji} ${mode} SIGNAL OP*\n` +
+                `🔸 *Pair:* ${signal.symbol}\n` +
+                `🔸 *Timeframe:* ${signal.timeframe}\n\n` +
+                `🎯 *Entry:* ${opPrice}\n` +
+                `🛡️ *SL Area:* ${slPriceNotes} (${slPctEnv}%)\n` +
+                `🎯 *Target RR:* ${rr}\n\n` +
+                `📊 *SUMMARY DATA:*\n` +
+                `${summaryText}`;
+
             } catch (e) {
-              console.log('Notes is not JSON or failed to parse, falling back to raw notes text.');
-              caption += `\n\n📝 *Notes:* ${signal.notes}`;
+              console.log('Notes is not JSON or failed to parse, falling back to basic format.');
+              caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice}`;
             }
+          } else {
+            caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice}`;
           }
 
           if (sock) {
