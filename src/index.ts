@@ -3,6 +3,7 @@ import { Boom } from '@hapi/boom';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import pino from 'pino';
+import path from 'path';
 import { useSupabaseAuthState } from './supabaseAuthState';
 import { startCronJobs } from './cronScheduler';
 import { generateAndSendPDF } from './pdfService';
@@ -10,7 +11,18 @@ import { generateAndSendPDF } from './pdfService';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config({ path: resolve(__dirname, '../.env') });
+import fs from 'fs';
+
+dotenv.config({ path: resolve(__dirname, '../.env') }); // load local .env
+
+// Load Python bot .env secara dinamis
+const pythonEnvPath = process.env.ENGULFING_ENV_PATH || resolve(__dirname, '../../../engulfing/.env');
+if (fs.existsSync(pythonEnvPath)) {
+    dotenv.config({ path: pythonEnvPath });
+} else {
+    console.warn(`\n[WARNING] Python .env tidak ditemukan di jalur: ${pythonEnvPath}`);
+    console.warn(`[WARNING] Jika berjalan di Live Server, pastikan variabel konfigurasi (seperti MT5_SYMBOL, dll) sudah di-set langsung di Environment Variables OS/Server Anda.\n`);
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
