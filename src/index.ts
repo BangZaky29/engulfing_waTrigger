@@ -134,7 +134,7 @@ function setupSupabaseListeners() {
     .channel('engulfing_signals_changes')
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'engulfing_signals' },
+      { event: 'INSERT', schema: 'public', table: 'engulfing_signals', filter: 'is_confirmed=eq.true' },
       async (payload) => {
         const signal = payload.new;
         console.log(`New OP signal detected! Symbol: ${signal.symbol}`);
@@ -161,6 +161,7 @@ function setupSupabaseListeners() {
               const rr = notesObj.rr_ratio || 1.5;
               const slPriceNotes = notesObj.sl_price || slPrice;
               const slPctEnv = process.env.EXECUTION_SL_PCT || '75';
+              const ticketId = notesObj.ticket_id || '-';
 
               const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPriceNotes}`;
 
@@ -171,7 +172,8 @@ function setupSupabaseListeners() {
                 `🔸 *Timeframe:* ${signal.timeframe}\n\n` +
                 `🎯 *Entry:* ${opPrice}\n` +
                 `🛡️ *SL Area:* ${slPriceNotes} (${slPctEnv}%)\n` +
-                `🎯 *Target RR:* ${rr}\n\n` +
+                `🎯 *Target RR:* ${rr}\n` +
+                `🎫 *Ticket:* ${ticketId}\n\n` +
                 `📊 *SUMMARY DATA:*\n` +
                 `${summaryText}`;
 
@@ -223,6 +225,12 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const tgl = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
+    const pairInfo = (process.env.MT5_SYMBOL || 'Unknown').split('#')[0].trim();
+    const tfInfo = (process.env.STRATEGY_TIMEFRAME || 'Unknown').split('#')[0].trim();
+    const minGradeInfo = (process.env.MIN_GRADE_ALLOWED || 'C+').split('#')[0].trim();
+    const rrInfo = (process.env.EXECUTION_TP_RR_RATIO || '1.5').split('#')[0].trim();
+    const slPctInfo = (process.env.EXECUTION_SL_PCT || '80').split('#')[0].trim();
+
     const startupMsg =
       `🟢 *SISTEM AKTIF* 🟢\n\n` +
       `🤖 *Engulfing Analytics Bot* telah berhasil dinyalakan dan siap beroperasi.\n\n` +
@@ -230,12 +238,27 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       `📅 Tanggal : ${tgl}\n` +
       `🕐 Waktu   : ${jam} WIB\n` +
       `━━━━━━━━━━━━━━━━━\n\n` +
+      `⚙️ *KONFIGURASI AKTIF:*\n` +
+      `🔸 *Pair:* ${pairInfo}\n` +
+      `🔸 *Timeframe:* ${tfInfo}\n` +
+      `🔸 *Min Grade OP:* ${minGradeInfo}\n` +
+      `🔸 *Target RR:* 1:${rrInfo}\n` +
+      `🔸 *SL Mode:* Ring ${slPctInfo}%\n\n` +
       `✅ Scanner engulfing aktif\n` +
       `✅ Listener sinyal aktif\n` +
       `✅ Laporan otomatis terjadwal\n\n` +
-      `_Bot akan mengirim notifikasi setiap ada sinyal baru. Stay tuned!_ 🚀`;
+      `_Bot akan mengirim notifikasi OP jika market memenuhi kriteria di atas._ 🚀`;
 
     console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID} (attempt ${retryCount + 1}/${MAX_RETRY})...`);
+    
+    // WARMUP: Pancing Baileys untuk mengambil metadata grup agar session crypto ter-sinkron
+    try {
+      await sock.groupMetadata(GROUP_JID);
+      await delay(2000); // Beri waktu ekstra untuk generate keys
+    } catch (e) {
+      console.log(`[STARTUP] Warmup group gagal (bukan error fatal): ${e}`);
+    }
+
     await sock.sendMessage(GROUP_JID, { text: startupMsg });
     console.log('[STARTUP] ✅ Notifikasi startup BERHASIL dikirim ke grup WA!');
 
