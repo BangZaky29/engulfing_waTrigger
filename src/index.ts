@@ -176,6 +176,7 @@ function setupSupabaseListeners() {
               const ticketId = notesObj.ticket_id || '-';
 
               const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPriceNotes}`;
+              const breakdownText = notesObj.score_breakdown ? `\n\n📈 *Score Breakdown:*\n${notesObj.score_breakdown}` : '';
 
               caption =
                 `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
@@ -187,7 +188,8 @@ function setupSupabaseListeners() {
                 `🎯 *Target RR:* ${rr}\n` +
                 `🎫 *Ticket:* ${ticketId}\n\n` +
                 `📊 *SUMMARY DATA:*\n` +
-                `${summaryText}`;
+                `${summaryText}` + 
+                `${breakdownText}`;
 
             } catch (e) {
               console.log('Notes is not JSON or failed to parse, falling back to basic format.');
