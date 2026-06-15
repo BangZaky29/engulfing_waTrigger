@@ -40,6 +40,10 @@ let isFirstConnect = true;       // flag startup notif hanya sekali
 let listenersRegistered = false; // flag agar listener Supabase tidak dobel saat reconnect
 let clearAuthState: (() => Promise<void>) | null = null; // expose clearState ke module scope
 
+let lockAcquired = false;
+let heartbeatInterval: any = null;
+const INSTANCE_ID = `bot-${process.pid}-${Math.random().toString(36).substring(2, 10)}`;
+
 // =====================================================
 // Helper: delay
 // =====================================================
@@ -75,8 +79,12 @@ function setupSupabaseListeners() {
             } else {
               // Fallback: langsung hapus via supabase client
               await supabase
+                .from('whatsapp_auth_keys')
+                .delete()
+                .eq('session_id', 'main_session');
+              await supabase
                 .from('whatsapp_sessions')
-                .update({ session_data: {}, status: 'UNPAIRED', qr_code: null })
+                .update({ status: 'UNPAIRED', qr_code: null })
                 .eq('id', 'main_session');
               console.log('[LOGOUT] ✅ session_data dihapus via fallback.');
             }
@@ -289,9 +297,165 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
   }
 }
 
+// =====================================================
+// Database Lock Helpers
+// =====================================================
+async function acquireLock(supabase: any, sessionId: string, instanceId: string): Promise<boolean> {
+  try {
+    const { data: session, error } = await supabase
+      .from('whatsapp_sessions')
+      .select('owner_id, locked_at')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[LOCK] Error reading lock status:', error.message);
+      return false;
+    }
+
+    if (!session) {
+      console.error('[LOCK] Session not found in database.');
+      return false;
+    }
+
+    const now = Date.now();
+    const lockedAtTime = session.locked_at ? new Date(session.locked_at).getTime() : 0;
+    const isStale = !session.locked_at || (now - lockedAtTime > 60000); // 1 minute stale threshold
+
+    // Case 1: Unlocked
+    if (!session.owner_id) {
+      const { error: updateError } = await supabase
+        .from('whatsapp_sessions')
+        .update({
+          owner_id: instanceId,
+          locked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .is('owner_id', null);
+
+      if (!updateError) {
+        console.log('[LOCK] Lock acquired successfully (was unlocked).');
+        return true;
+      }
+      console.warn('[LOCK] Failed to acquire lock (was unlocked but claimed by someone else).');
+      return false;
+    }
+
+    // Case 2: Already locked by us
+    if (session.owner_id === instanceId) {
+      const { error: updateError } = await supabase
+        .from('whatsapp_sessions')
+        .update({
+          locked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .eq('owner_id', instanceId);
+
+      if (!updateError) {
+        return true;
+      }
+      return false;
+    }
+
+    // Case 3: Locked by another instance but stale
+    if (isStale) {
+      console.log(`[LOCK] Lock is stale (held by ${session.owner_id} since ${session.locked_at}). Attempting to override...`);
+      const { error: updateError } = await supabase
+        .from('whatsapp_sessions')
+        .update({
+          owner_id: instanceId,
+          locked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .eq('owner_id', session.owner_id);
+
+      if (!updateError) {
+        console.log(`[LOCK] Lock overridden successfully. New owner: ${instanceId}`);
+        return true;
+      }
+      console.warn('[LOCK] Failed to override stale lock.');
+      return false;
+    }
+
+    // Case 4: Locked by another active instance
+    console.warn(`[LOCK] ⚠️ Gagal start! Sesi sedang dikunci oleh instance lain (${session.owner_id}) yang aktif.`);
+    return false;
+  } catch (e: any) {
+    console.error('[LOCK] Exception during lock acquisition:', e?.message || e);
+    return false;
+  }
+}
+
+async function releaseLock(supabase: any, sessionId: string, instanceId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('whatsapp_sessions')
+      .update({
+        owner_id: null,
+        locked_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sessionId)
+      .eq('owner_id', instanceId);
+
+    if (error) {
+      console.error('[LOCK] Gagal melepaskan lock:', error.message);
+    } else {
+      console.log('[LOCK] Lock dilepaskan secara bersih.');
+    }
+  } catch (e: any) {
+    console.error('[LOCK] Exception saat melepaskan lock:', e?.message || e);
+  }
+}
+
+function startLockHeartbeat(supabase: any, sessionId: string, instanceId: string) {
+  return setInterval(async () => {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_sessions')
+        .update({
+          locked_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .eq('owner_id', instanceId);
+
+      if (error) {
+        console.error('[LOCK] Heartbeat gagal, lock mungkin direbut atau terputus:', error.message);
+      }
+    } catch (e: any) {
+      console.error('[LOCK] Exception saat heartbeat:', e?.message || e);
+    }
+  }, 20000); // 20 detik
+}
+
 async function connectToWhatsApp() {
   console.log('Starting WhatsApp Trigger Bot...');
   console.log(`[CONFIG] GROUP_JID = ${GROUP_JID}`);
+
+  // Acquire lock on initial start
+  if (!lockAcquired) {
+    console.log(`[LOCK] Mencoba mendapatkan lock untuk instance: ${INSTANCE_ID}`);
+    for (let i = 0; i < 6; i++) {
+      const acquired = await acquireLock(supabase, SESSION_ID, INSTANCE_ID);
+      if (acquired) {
+        lockAcquired = true;
+        break;
+      }
+      console.log(`[LOCK] Lock sedang aktif. Mencoba lagi dalam 10 detik... (${i + 1}/6)`);
+      await delay(10000);
+    }
+
+    if (!lockAcquired) {
+      console.error('[LOCK] ❌ Gagal mendapatkan lock setelah beberapa percobaan. Harap pastikan tidak ada instance lain yang berjalan.');
+      process.exit(1);
+    }
+
+    // Start lock heartbeat
+    heartbeatInterval = startLockHeartbeat(supabase, SESSION_ID, INSTANCE_ID);
+  }
 
   const { state, saveCreds, clearState } = await useSupabaseAuthState(supabase);
   const { version } = await fetchLatestBaileysVersion();
@@ -393,6 +557,12 @@ process.on('SIGINT', async () => {
       console.error('[SYSTEM] Gagal mengirim Shutdown Report:', e);
     }
   }
+
+  // Release lock cleanly
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+  }
+  await releaseLock(supabase, SESSION_ID, INSTANCE_ID);
 
   console.log('[SYSTEM] Keluar dari proses. Sampai jumpa!');
   process.exit(0);
