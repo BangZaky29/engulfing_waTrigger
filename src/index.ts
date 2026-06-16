@@ -184,7 +184,14 @@ function setupSupabaseListeners() {
             `${sessionStr}\n\n` +
             `🎫 *Ticket:* ${log.ticket_id}`;
 
-          if (sock) {
+          if (log.image_url && sock) {
+            console.log(`Mengunduh dan mengirim gambar Active Log ke grup ${GROUP_JID}...`);
+            await sock.sendMessage(GROUP_JID, {
+              image: { url: log.image_url },
+              caption,
+            });
+            console.log(`✅ Sukses! Gambar Active Log beserta caption berhasil dikirim.`);
+          } else if (sock) {
             console.log(`Mengirim notifikasi Active Log ke grup ${GROUP_JID}...`);
             await sock.sendMessage(GROUP_JID, { text: caption });
             console.log(`✅ Sukses! Notifikasi Active Log berhasil dikirim ke grup.`);
