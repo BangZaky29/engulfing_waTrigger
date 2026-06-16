@@ -13,30 +13,47 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
   // 1. Load credentials dari whatsapp_auth_keys
   // =========================================================
   let creds: any = null;
+  let success = false;
+  let retries = 5;
 
-  try {
-    const { data, error } = await supabase
-      .from('whatsapp_auth_keys')
-      .select('value')
-      .eq('session_id', SESSION_ID)
-      .eq('key_type', 'creds')
-      .eq('key_id', 'creds')
-      .maybeSingle();
+  while (!success && retries > 0) {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_auth_keys')
+        .select('value')
+        .eq('session_id', SESSION_ID)
+        .eq('key_type', 'creds')
+        .eq('key_id', 'creds')
+        .maybeSingle();
 
-    if (error) {
-      console.error('[AUTH] Error membaca creds dari Supabase:', error.message);
-    } else if (data?.value) {
-      console.log('[AUTH] Creds ditemukan di Supabase. Memuat...');
-      creds = JSON.parse(JSON.stringify(data.value), BufferJSON.reviver);
-      console.log(`[AUTH] ✅ Creds berhasil dimuat. creds.me = ${JSON.stringify(creds?.me)}`);
-    } else {
-      console.log('[AUTH] Creds kosong atau belum ada. Inisialisasi fresh credentials...');
+      if (error) {
+        console.error('[AUTH] Error membaca creds dari Supabase:', error.message);
+        console.log(`[AUTH] Membaca creds gagal, mencoba kembali dalam 5 detik... (${retries - 1} sisa percobaan)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        retries--;
+        continue;
+      }
+      
+      if (data?.value) {
+        console.log('[AUTH] Creds ditemukan di Supabase. Memuat...');
+        creds = JSON.parse(JSON.stringify(data.value), BufferJSON.reviver);
+        console.log(`[AUTH] ✅ Creds berhasil dimuat. creds.me = ${JSON.stringify(creds?.me)}`);
+      } else {
+        console.log('[AUTH] Creds kosong atau belum ada.');
+      }
+      success = true;
+    } catch (e: any) {
+      console.error('[AUTH] Exception saat membaca creds:', e?.message || e);
+      console.log(`[AUTH] Mencoba kembali dalam 5 detik... (${retries - 1} sisa percobaan)`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      retries--;
     }
-  } catch (e: any) {
-    console.error('[AUTH] Exception saat membaca creds:', e?.message || e);
   }
 
-  // Jika creds null/tidak valid, init fresh
+  if (!success) {
+    throw new Error('Gagal menghubungkan ke database Supabase untuk memuat auth credentials.');
+  }
+
   if (!creds) {
     creds = initAuthCreds();
     console.log('[AUTH] Fresh credentials initialized.');
@@ -94,6 +111,19 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
 
       if (sessionError) {
         console.error('[AUTH] Error mengupdate status session di Supabase:', sessionError.message);
+      }
+
+      const { error: publicError } = await supabase
+        .from('whatsapp_public_status')
+        .upsert({
+          id: SESSION_ID,
+          status: 'UNPAIRED',
+          qr_code: null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      if (publicError) {
+        console.error('[AUTH] Error mengupdate status public session di Supabase:', publicError.message);
       }
 
       // Reset local creds

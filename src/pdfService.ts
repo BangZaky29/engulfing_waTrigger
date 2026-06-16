@@ -11,8 +11,13 @@ dotenv.config({ path: resolve(__dirname, '../.env') });
 
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY!;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  }
+});
 
 export async function generateAndSendPDF(sock: any, reportType: string, groupJid: string, dateStart: Date, dateEnd: Date) {
   try {
