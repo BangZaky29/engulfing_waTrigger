@@ -126,8 +126,9 @@ function setupSupabaseListeners() {
         try {
           const modeEmoji = trade.mode?.toUpperCase() === 'BUY' ? '🟢' : '🔴';
           const resultEmoji = trade.result?.toUpperCase() === 'PROFIT' ? '🎉' : '💀';
+          const sessionStr = trade.trading_session ? `\n🔸 *Sesi:* ${trade.trading_session}` : '';
 
-          const caption = `📈 *ENGULFING SIGNAL* 📉\n\n*${modeEmoji} ${trade.mode} ${trade.result}* ${resultEmoji}\n🔸 *Pair:* ${trade.symbol}\n🔸 *Timeframe:* ${trade.timeframe}\n\n💰 *Profit:* $${trade.profit ? trade.profit.toFixed(2) : '0.00'}\n🎫 *Ticket:* ${trade.ticket_id}`;
+          const caption = `📈 *ENGULFING SIGNAL* 📉\n\n*${modeEmoji} ${trade.mode} ${trade.result}* ${resultEmoji}\n🔸 *Pair:* ${trade.symbol}\n🔸 *Timeframe:* ${trade.timeframe}${sessionStr}\n\n💰 *Profit:* $${trade.profit ? trade.profit.toFixed(2) : '0.00'}\n🎫 *Ticket:* ${trade.ticket_id}`;
 
           if (trade.image_url && sock) {
             console.log(`Mengunduh dan mengirim gambar ke grup ${GROUP_JID}...`);
@@ -146,6 +147,46 @@ function setupSupabaseListeners() {
       console.log(`[LISTENER] trade_analytics_changes subscription status: ${status}`);
       if (status === 'CHANNEL_ERROR') {
         console.error('[LISTENER] ❌ Gagal subscribe ke trade_analytics! Pastikan table ini terdaftar di PUBLICATION supabase_realtime.');
+      }
+    });
+
+  // Listen to Supabase Realtime for LIMIT ORDER TERSENTUH (Active logs)
+  supabase
+    .channel('trade_active_logs_changes')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'trade_active_logs' },
+      async (payload) => {
+        const log = payload.new;
+        console.log(`New active log detected! Ticket: ${log.ticket_id}`);
+
+        try {
+          const modeEmoji = log.mode?.toUpperCase() === 'BUY' ? '🟢' : '🔴';
+          const sessionStr = log.trading_session ? `\n🔸 *Sesi:* ${log.trading_session}` : '';
+
+          const caption = `🎯 *PENDING ORDER TERSENTUH* 🎯\n\n` +
+            `${log.message || `🔥 LIMIT ORDER TERSENTUH! Posisi ${log.mode} aktif sekarang.`}\n\n` +
+            `🔸 *Pair:* ${log.symbol}\n` +
+            `🔸 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
+            `🔸 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
+            `🔸 *TP:* ${log.tp_price ? log.tp_price.toFixed(5) : '-'}` +
+            `${sessionStr}\n\n` +
+            `🎫 *Ticket:* ${log.ticket_id}`;
+
+          if (sock) {
+            console.log(`Mengirim notifikasi Active Log ke grup ${GROUP_JID}...`);
+            await sock.sendMessage(GROUP_JID, { text: caption });
+            console.log(`✅ Sukses! Notifikasi Active Log berhasil dikirim ke grup.`);
+          }
+        } catch (error) {
+          console.error('Error sending active log message:', error);
+        }
+      }
+    )
+    .subscribe((status: string) => {
+      console.log(`[LISTENER] trade_active_logs_changes subscription status: ${status}`);
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[LISTENER] ❌ Gagal subscribe ke trade_active_logs! Pastikan table ini terdaftar di PUBLICATION supabase_realtime.');
       }
     });
 
@@ -190,7 +231,8 @@ function setupSupabaseListeners() {
                 `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
                 `*${modeEmoji} ${mode} SIGNAL OP*\n` +
                 `🔸 *Pair:* ${signal.symbol}\n` +
-                `🔸 *Timeframe:* ${signal.timeframe}\n\n` +
+                `🔸 *Timeframe:* ${signal.timeframe}\n` +
+                `🔸 *Sesi:* ${signal.trading_session || '-'}\n\n` +
                 `🎯 *Entry:* ${opPrice}\n` +
                 `🛡️ *SL Area:* ${slPriceNotes} (${slPctUsed}%)\n` +
                 `🎯 *Target RR:* ${rr}\n` +
@@ -201,10 +243,10 @@ function setupSupabaseListeners() {
 
             } catch (e) {
               console.log('Notes is not JSON or failed to parse, falling back to basic format.');
-              caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice}`;
+              caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice} | Sesi: ${signal.trading_session || '-'}`;
             }
           } else {
-            caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice}`;
+            caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice} | Sesi: ${signal.trading_session || '-'}`;
           }
 
           if (sock) {
