@@ -164,8 +164,19 @@ function setupSupabaseListeners() {
           const modeEmoji = log.mode?.toUpperCase() === 'BUY' ? '🟢' : '🔴';
           const sessionStr = log.trading_session ? `\n🔸 *Sesi:* ${log.trading_session}` : '';
 
-          const caption = `🎯 *PENDING ORDER TERSENTUH* 🎯\n\n` +
-            `${log.message || `🔥 LIMIT ORDER TERSENTUH! Posisi ${log.mode} aktif sekarang.`}\n\n` +
+          let title = '🎯 *PENDING ORDER TERSENTUH* 🎯';
+          let defaultMsg = `🔥 LIMIT ORDER TERSENTUH! Posisi ${log.mode} aktif sekarang.`;
+          
+          if (log.message.includes('EXPIRED')) {
+            title = '⏳ *PENDING ORDER KADALUWARSA (EXPIRED)* ⏳';
+            defaultMsg = `⏱️ LIMIT ORDER EXPIRED! Batas waktu terlewati tanpa tersentuh.`;
+          } else if (log.message.includes('OVERRIDDEN') || log.message.includes('DIBATALKAN')) {
+            title = '🧹 *PENDING ORDER DIBATALKAN (OVERRIDE)* 🧹';
+            defaultMsg = `🗑️ LIMIT ORDER OVERRIDDEN! Dibatalkan karena ada trigger baru yang aktif.`;
+          }
+
+          const caption = `${title}\n\n` +
+            `${log.message || defaultMsg}\n\n` +
             `🔸 *Pair:* ${log.symbol}\n` +
             `🔸 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
             `🔸 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
