@@ -3,6 +3,29 @@ import type { AuthenticationState, SignalDataTypeMap } from '@whiskeysockets/bai
 
 const SESSION_ID = 'main_session';
 
+// =========================================================
+// Helper: Deteksi apakah error adalah network error
+// (bukan logic error seperti RLS / permission denied)
+// =========================================================
+function isNetworkError(err: any): boolean {
+  const msg = String(err?.message ?? err?.code ?? err ?? '').toLowerCase();
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('etimedout') ||
+    msg.includes('econnreset') ||
+    msg.includes('enotfound') ||
+    msg.includes('econnrefused') ||
+    msg.includes('network') ||
+    msg.includes('socket hang up') ||
+    msg.includes('aborted')
+  );
+}
+
+// =========================================================
+// Helper: Delay
+// =========================================================
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function useSupabaseAuthState(supabase: any): Promise<{
   state: AuthenticationState;
   saveCreds: () => Promise<void>;
@@ -11,10 +34,15 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
 
   // =========================================================
   // 1. Load credentials dari whatsapp_auth_keys
+  //    PENTING: Bedain antara:
+  //    - Network error  → HARUS retry, jangan init fresh
+  //    - Data kosong    → boleh init fresh credentials
+  //    - Auth error     → stop, butuh fix Supabase
   // =========================================================
   let creds: any = null;
   let success = false;
   let retries = 5;
+  let lastError: any = null;
 
   while (!success && retries > 0) {
     try {
@@ -27,36 +55,65 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
         .maybeSingle();
 
       if (error) {
+        // Cek apakah ini error permission/logic (langsung stop)
+        if (
+          error.code === 'PGRST301' ||
+          error.code === '42501' ||
+          error.message?.includes('permission denied') ||
+          error.message?.includes('RLS')
+        ) {
+          console.error('[AUTH] ❌ Permission error dari Supabase (RLS/policy):', error.message);
+          console.error('[AUTH] Pastikan bot menggunakan SUPABASE_SERVICE_KEY, bukan anon key!');
+          throw new Error(`Supabase permission error: ${error.message}`);
+        }
+
+        // Error lain → retry
         console.error('[AUTH] Error membaca creds dari Supabase:', error.message);
         console.log(`[AUTH] Membaca creds gagal, mencoba kembali dalam 5 detik... (${retries - 1} sisa percobaan)`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        lastError = error;
+        await delay(5000);
         retries--;
         continue;
       }
-      
+
       if (data?.value) {
         console.log('[AUTH] Creds ditemukan di Supabase. Memuat...');
         creds = JSON.parse(JSON.stringify(data.value), BufferJSON.reviver);
         console.log(`[AUTH] ✅ Creds berhasil dimuat. creds.me = ${JSON.stringify(creds?.me)}`);
       } else {
-        console.log('[AUTH] Creds kosong atau belum ada.');
+        // Row tidak ada sama sekali = belum pernah scan QR → fresh credentials DIIZINKAN
+        console.log('[AUTH] Creds kosong atau belum ada. Akan inisialisasi fresh credentials.');
       }
+
       success = true;
     } catch (e: any) {
-      console.error('[AUTH] Exception saat membaca creds:', e?.message || e);
-      console.log(`[AUTH] Mencoba kembali dalam 5 detik... (${retries - 1} sisa percobaan)`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      retries--;
+      // Kalau ini network error → JANGAN init fresh, harus retry
+      if (isNetworkError(e)) {
+        console.error(`[AUTH] 🌐 Network error saat membaca creds: ${e?.message || e}`);
+        console.log(`[AUTH] Ini adalah network error, TIDAK akan init fresh credentials.`);
+        console.log(`[AUTH] Mencoba kembali dalam 5 detik... (${retries - 1} sisa percobaan)`);
+        lastError = e;
+        await delay(5000);
+        retries--;
+        continue;
+      }
+
+      // Error non-network (mis. permission/RLS) → langsung throw
+      console.error('[AUTH] ❌ Fatal exception saat membaca creds:', e?.message || e);
+      throw e;
     }
   }
 
   if (!success) {
-    throw new Error('Gagal menghubungkan ke database Supabase untuk memuat auth credentials.');
+    const errMsg = `Gagal menghubungkan ke database Supabase untuk memuat auth credentials. Last error: ${lastError?.message || lastError}`;
+    console.error(`[AUTH] ❌ ${errMsg}`);
+    throw new Error(errMsg);
   }
 
+  // Hanya init fresh jika benar-benar tidak ada data (bukan karena network error)
   if (!creds) {
     creds = initAuthCreds();
-    console.log('[AUTH] Fresh credentials initialized.');
+    console.log('[AUTH] ✅ Fresh credentials initialized (belum ada data di Supabase).');
   }
 
   // =========================================================
@@ -77,6 +134,8 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
 
       if (error) {
         console.error('[AUTH] Error menyimpan creds ke Supabase:', error.message);
+      } else {
+        console.log('[AUTH] ✅ Creds berhasil disimpan ke Supabase.');
       }
     } catch (e: any) {
       console.error('[AUTH] Exception saat menyimpan creds:', e?.message || e);
@@ -85,12 +144,12 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
 
   // =========================================================
   // 3. Fungsi clear state (dipanggil saat logout/reconnect)
-  //    Hapus seluruh keys dari whatsapp_auth_keys & reset status whatsapp_sessions
+  //    Hapus seluruh keys dari whatsapp_auth_keys & reset status
   // =========================================================
   const clearState = async () => {
     try {
       console.log('[AUTH] Menghapus auth keys dari Supabase...');
-      
+
       const { error: deleteError } = await supabase
         .from('whatsapp_auth_keys')
         .delete()
@@ -185,6 +244,7 @@ export async function useSupabaseAuthState(supabase: any): Promise<{
                   updated_at: new Date().toISOString()
                 });
               } else {
+                // Nilai null = hapus key ini
                 try {
                   await supabase
                     .from('whatsapp_auth_keys')
