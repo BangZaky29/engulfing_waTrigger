@@ -277,7 +277,8 @@ export async function generateAndSendPDF(sock: any, reportType: string, groupJid
       `💰 Gross Profit : $${grossProfit.toFixed(2)}\n` +
       `💸 Gross Loss   : -$${grossLoss.toFixed(2)}\n` +
       `🏦 Net P&L      : ${profitSign}$${netProfit.toFixed(2)}\n` +
-      `━━━━━━━━━━━━━━━━━\n\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      (mostProfit ? `🏆 Best Pair    : ${mostProfit.sym} (+$${mostProfit.profit.toFixed(2)})\n━━━━━━━━━━━━━━━━━\n\n` : '\n') +
       `_Laporan PDF lengkap terlampir._`;
 
     await sock.sendMessage(groupJid, {

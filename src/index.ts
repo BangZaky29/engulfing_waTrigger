@@ -396,7 +396,16 @@ function setupSupabaseListeners() {
           const resultEmoji = trade.result?.toUpperCase() === 'PROFIT' ? '🎉' : '💀';
           const sessionStr = trade.trading_session ? `\n🔸 *Sesi:* ${trade.trading_session}` : '';
 
-          const caption = `📈 *ENGULFING SIGNAL* 📉\n\n*${modeEmoji} ${trade.mode} ${trade.result}* ${resultEmoji}\n🔸 *Pair:* ${trade.symbol}\n🔸 *Timeframe:* ${trade.timeframe}${sessionStr}\n\n💰 *Profit:* $${trade.profit ? trade.profit.toFixed(2) : '0.00'}\n🎫 *Ticket:* ${trade.ticket_id}`;
+          const caption = 
+            `📊 *TRADE RESULT* 📊\n\n` +
+            `${modeEmoji} *${trade.mode} ${trade.result}* ${resultEmoji}\n` +
+            `━━━━━━━━━━━━━━━━━\n` +
+            `📌 *Pair:* ${trade.symbol}\n` +
+            `⏱️ *TF:* ${trade.timeframe}\n` +
+            `💰 *Profit:* $${trade.profit ? trade.profit.toFixed(2) : '0.00'}\n` +
+            `${sessionStr}\n` +
+            `━━━━━━━━━━━━━━━━━\n` +
+            `🎫 *Ticket:* ${trade.ticket_id}`;
 
           await enqueueWaMessage({
             sourceTable: 'trade_analytics',
@@ -447,13 +456,16 @@ function setupSupabaseListeners() {
             defaultMsg = `🗑️ LIMIT ORDER OVERRIDDEN! Dibatalkan karena ada trigger baru yang aktif.`;
           }
 
-          const caption = `${title}\n\n` +
+          const caption = 
+            `${title}\n` +
+            `━━━━━━━━━━━━━━━━━\n` +
             `${log.message || defaultMsg}\n\n` +
-            `🔸 *Pair:* ${log.symbol}\n` +
-            `🔸 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
-            `🔸 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
-            `🔸 *TP:* ${log.tp_price ? log.tp_price.toFixed(5) : '-'}` +
-            `${sessionStr}\n\n` +
+            `📌 *Pair:* ${log.symbol}\n` +
+            `🎯 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
+            `🛑 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
+            `🏆 *TP:* ${log.tp_price ? log.tp_price.toFixed(5) : '-'}` +
+            `${sessionStr}\n` +
+            `━━━━━━━━━━━━━━━━━\n` +
             `🎫 *Ticket:* ${log.ticket_id}`;
 
           await enqueueWaMessage({
@@ -513,22 +525,23 @@ function setupSupabaseListeners() {
               const slPctUsed = notesObj.sl_pct_used !== undefined ? notesObj.sl_pct_used : (process.env.EXECUTION_SL_PCT || '75');
               const ticketId = notesObj.ticket_id || '-';
 
-              const summaryText = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${actionStr} | Grade : ${grade} | B : ${bPct}% | CP : ${cpPct}% | RR : ${rr} | SL : ${slPctUsed}%`;
-              const breakdownText = notesObj.score_breakdown ? `\n\n📈 *Score Breakdown:*\n${notesObj.score_breakdown}` : '';
+              const opPriceStr = notesObj.op_price ? Number(notesObj.op_price).toFixed(2) : opPrice;
+              const tpPriceStr = notesObj.tp_price ? Number(notesObj.tp_price).toFixed(2) : '-';
+              const ringPts = notesObj.ring_pts || (process.env.NORMAL_RING_C1_POINTS || '-');
+              const filterStrategy = process.env.ACTIVE_FILTER_STRATEGY ? `FILTER ${process.env.ACTIVE_FILTER_STRATEGY}` : 'FILTER B';
 
               caption =
-                `⚠️ *NEW OPEN POSITION* ⚠️\n\n` +
-                `*${modeEmoji} ${mode} SIGNAL OP*\n` +
-                `🔸 *Pair:* ${signal.symbol}\n` +
-                `🔸 *Timeframe:* ${signal.timeframe}\n` +
-                `🔸 *Sesi:* ${signal.trading_session || '-'}\n\n` +
-                `🎯 *Entry:* ${opPrice}\n` +
-                `🛡️ *SL Area:* ${slPriceNotes} (${slPctUsed}%)\n` +
-                `🎯 *Target RR:* ${rr}\n` +
-                `🎫 *Ticket:* ${ticketId}\n\n` +
-                `📊 *SUMMARY DATA:*\n` +
-                `${summaryText}` +
-                `${breakdownText}`;
+                `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
+                `----------------------------------\n` +
+                `📌 *Pair:* ${signal.symbol}\n` +
+                `⏱️ *TF:* ${signal.timeframe}\n` +
+                `📊 *Strategy:* ${filterStrategy}\n\n` +
+                `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} LIMIT)\n` +
+                `🛑 *SL:* ${slPriceNotes} (Ring ${ringPts} pts)\n` +
+                `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
+                `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                `----------------------------------\n` +
+                `⚠️ _Harap gunakan manajemen risiko yang baik_`;
 
             } catch (e) {
               console.log('Notes is not JSON or failed to parse, falling back to basic format.');
@@ -583,11 +596,10 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const tgl = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
-    const pairInfo = (process.env.MT5_SYMBOL || 'Unknown').split('#')[0].trim();
+    const pairs = process.env.MT5_SYMBOLS ? process.env.MT5_SYMBOLS.split('#')[0].trim().split(',').join(', ') : 'Unknown';
     const tfInfo = (process.env.STRATEGY_TIMEFRAME || 'Unknown').split('#')[0].trim();
+    const activeFilter = process.env.ACTIVE_FILTER_STRATEGY ? `Filter ${process.env.ACTIVE_FILTER_STRATEGY.split('#')[0].trim()}` : 'Filter B';
     const minGradeInfo = (process.env.MIN_GRADE_ALLOWED || 'C+').split('#')[0].trim();
-    const rrInfo = (process.env.EXECUTION_TP_RR_RATIO || '1.5').split('#')[0].trim();
-    const slPctInfo = (process.env.EXECUTION_SL_PCT || '80').split('#')[0].trim();
 
     const startupMsg =
       `🟢 *SISTEM AKTIF* 🟢\n\n` +
@@ -597,13 +609,12 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       `🕐 Waktu   : ${jam} WIB\n` +
       `━━━━━━━━━━━━━━━━━\n\n` +
       `⚙️ *KONFIGURASI AKTIF:*\n` +
-      `🔸 *Pair:* ${pairInfo}\n` +
+      `🔸 *Pairs:* ${pairs}\n` +
       `🔸 *Timeframe:* ${tfInfo}\n` +
-      `🔸 *Min Grade OP:* ${minGradeInfo}\n` +
-      `🔸 *Target RR:* 1:${rrInfo}\n` +
-      `🔸 *SL Mode:* Ring ${slPctInfo}%\n\n` +
-      `✅ Scanner engulfing aktif\n` +
-      `✅ Listener sinyal aktif\n` +
+      `🔸 *Strategy:* ${activeFilter}\n` +
+      `🔸 *Min Grade:* ${minGradeInfo}\n\n` +
+      `✅ Multi-Currency Scanner aktif\n` +
+      `✅ Listener sinyal Realtime aktif\n` +
       `✅ Laporan otomatis terjadwal\n\n` +
       `_Bot akan mengirim notifikasi OP jika market memenuhi kriteria di atas._ 🚀`;
 
