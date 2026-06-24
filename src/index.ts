@@ -512,14 +512,14 @@ function setupSupabaseListeners() {
 
           let caption = '';
 
-          if (signal.ticket_id === 'INFO_SYNC') {
+          let notesObj: any = {};
+          try { notesObj = JSON.parse(signal.notes || '{}'); } catch (e) {}
+
+          if (notesObj.ticket_id === 'INFO_SYNC') {
             let syncText = signal.timeframe; // e.g. SYNC_M15_H1
-            try {
-               const notesObj = JSON.parse(signal.notes || '{}');
-               if (notesObj.sync_with) {
-                 syncText = syncText.replace('SYNC_', '').replace('_', ' & ');
-               }
-            } catch (e) {}
+            if (notesObj.sync_with) {
+              syncText = syncText.replace('SYNC_', '').replace('_', ' & ');
+            }
 
             caption = 
                 `🔥 *SYNC SIGNAL DETECTED* 🔥\n` +
@@ -529,8 +529,8 @@ function setupSupabaseListeners() {
                 `📈 *Direction:* ${modeEmoji} ${mode}\n` +
                 `----------------------------------\n` +
                 `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
-          } else if (signal.ticket_id && signal.ticket_id.startsWith('INFO_')) {
-            const infoTf = signal.ticket_id.replace('INFO_', '');
+          } else if (notesObj.ticket_id && typeof notesObj.ticket_id === 'string' && notesObj.ticket_id.startsWith('INFO_')) {
+            const infoTf = notesObj.ticket_id.replace('INFO_', '');
             caption = 
                 `ℹ️ *INFO SIGNAL [${infoTf}]* ℹ️\n` +
                 `----------------------------------\n` +
