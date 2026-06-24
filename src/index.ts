@@ -446,20 +446,23 @@ function setupSupabaseListeners() {
           const sessionStr = log.trading_session ? `\n🔸 *Sesi:* ${log.trading_session}` : '';
 
           let title = '🎯 *PENDING ORDER TERSENTUH* 🎯';
-          let defaultMsg = `🔥 LIMIT ORDER TERSENTUH! Posisi ${log.mode} aktif sekarang.`;
+          let finalMsg = log.message || `🔥 LIMIT ORDER TERSENTUH! Posisi ${log.mode} aktif sekarang.`;
 
-          if (log.message.includes('EXPIRED')) {
+          if (log.message?.includes('EXPIRED')) {
             title = '⏳ *PENDING ORDER KADALUWARSA (EXPIRED)* ⏳';
-            defaultMsg = `⏱️ LIMIT ORDER EXPIRED! Batas waktu terlewati tanpa tersentuh.`;
-          } else if (log.message.includes('OVERRIDDEN') || log.message.includes('DIBATALKAN')) {
+          } else if (log.message?.includes('OVERRIDDEN') || log.message?.includes('DIBATALKAN')) {
             title = '🧹 *PENDING ORDER DIBATALKAN (OVERRIDE)* 🧹';
-            defaultMsg = `🗑️ LIMIT ORDER OVERRIDDEN! Dibatalkan karena ada trigger baru yang aktif.`;
+          } else if (log.message?.includes('HEDGE OP-2 TERSENTUH')) {
+            title = '🚨 *HEDGE (OP-2) AKTIF - MANUAL EXIT REQUIRED!* 🚨';
+            finalMsg = `⚠️ *PERHATIAN KHUSUS:* Posisi Hedging (OP-2) telah tersentuh dan terbuka!\n\n` +
+                       `🗑️ _Info: TP yang terpasang pada OP-1 telah dihapus secara otomatis oleh sistem._\n\n` +
+                       `👉 *Harap pantau dan lakukan eksekusi (Close/Exit) secara MANUAL (Manusia) untuk kedua posisi ini!*`;
           }
 
           const caption = 
             `${title}\n` +
             `━━━━━━━━━━━━━━━━━\n` +
-            `${log.message || defaultMsg}\n\n` +
+            `${finalMsg}\n\n` +
             `📌 *Pair:* ${log.symbol}\n` +
             `🎯 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
             `🛑 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
@@ -626,8 +629,19 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
     const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const tgl = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
-    const pairs = process.env.MT5_SYMBOLS ? process.env.MT5_SYMBOLS.split('#')[0].trim().split(',').join(', ') : 'Unknown';
-    const tfInfo = (process.env.STRATEGY_TIMEFRAME || 'Unknown').split('#')[0].trim();
+    const rawPairs = process.env.MT5_SYMBOLS ? process.env.MT5_SYMBOLS.split('#')[0].trim() : 'XAUUSD';
+    const pairsArray = rawPairs.split(',').map(s => s.trim());
+    const pairs = pairsArray.join(', ');
+    
+    const defaultTf = (process.env.STRATEGY_TIMEFRAME || 'M5').split('#')[0].trim();
+    const tfList = pairsArray.map(sym => {
+        const override = process.env[`TF_${sym}`];
+        return `${sym}(${override ? override.split('#')[0].trim() : defaultTf})`;
+    });
+    const tfInfo = tfList.join(', ');
+    
+    const infoTfs = (process.env.INFO_TIMEFRAMES || 'M15,H1').split('#')[0].trim();
+
     const activeFilter = process.env.ACTIVE_FILTER_STRATEGY ? `Filter ${process.env.ACTIVE_FILTER_STRATEGY.split('#')[0].trim()}` : 'Filter B';
     const minGradeInfo = (process.env.MIN_GRADE_ALLOWED || 'C+').split('#')[0].trim();
 
@@ -640,7 +654,8 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       `━━━━━━━━━━━━━━━━━\n\n` +
       `⚙️ *KONFIGURASI AKTIF:*\n` +
       `🔸 *Pairs:* ${pairs}\n` +
-      `🔸 *Timeframe:* ${tfInfo}\n` +
+      `🔸 *Execute TF:* ${tfInfo}\n` +
+      `🔸 *Info TFs:* ${infoTfs}\n` +
       `🔸 *Strategy:* ${activeFilter}\n` +
       `🔸 *Min Grade:* ${minGradeInfo}\n\n` +
       `✅ Multi-Currency Scanner aktif\n` +
