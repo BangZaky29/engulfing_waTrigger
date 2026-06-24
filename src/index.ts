@@ -452,6 +452,10 @@ function setupSupabaseListeners() {
             title = '⏳ *PENDING ORDER KADALUWARSA (EXPIRED)* ⏳';
           } else if (log.message?.includes('OVERRIDDEN') || log.message?.includes('DIBATALKAN')) {
             title = '🧹 *PENDING ORDER DIBATALKAN (OVERRIDE)* 🧹';
+          } else if (log.message?.includes('HAPUS OP-2 OTOMATIS')) {
+            title = '✅ *OP-1 TELAH PROFIT (TAKE PROFIT)*';
+            finalMsg = `🧹 *OP-2 DIBATALKAN (AUTO-CLEANUP)* 🧹\n` +
+                       `🗑️ _Info: Limit Order Hedging (OP-2) telah berhasil dibatalkan dan dihapus secara otomatis dari market._`;
           } else if (log.message?.includes('HEDGE OP-2 TERSENTUH')) {
             title = '🚨 *HEDGE (OP-2) AKTIF - MANUAL EXIT REQUIRED!* 🚨';
             finalMsg = `⚠️ *PERHATIAN KHUSUS:* Posisi Hedging (OP-2) telah tersentuh dan terbuka!\n\n` +
