@@ -507,48 +507,78 @@ function setupSupabaseListeners() {
           const mode = isBuy ? 'BUY' : 'SELL';
           const modeEmoji = isBuy ? '🟢' : '🔴';
 
-          const opPrice = signal.curr_close.toFixed(2);
-          const slPrice = isBuy ? signal.curr_low.toFixed(2) : signal.curr_high.toFixed(2);
-
           let caption = '';
 
-          if (signal.notes) {
+          if (signal.ticket_id === 'INFO_SYNC') {
+            let syncText = signal.timeframe; // e.g. SYNC_M15_H1
             try {
-              const notesObj = JSON.parse(signal.notes);
+               const notesObj = JSON.parse(signal.notes || '{}');
+               if (notesObj.sync_with) {
+                 syncText = syncText.replace('SYNC_', '').replace('_', ' & ');
+               }
+            } catch (e) {}
 
-              const actionStr = notesObj.action_str || mode;
-              const grade = notesObj.grade || '-';
-              const bPct = notesObj.body_pct || 0;
-              const cpPct = notesObj.cp_pct || 0;
-              const rr = notesObj.rr_ratio || 1.5;
-              const slPriceNotes = notesObj.sl_price || slPrice;
-              const slPctUsed = notesObj.sl_pct_used !== undefined ? notesObj.sl_pct_used : (process.env.EXECUTION_SL_PCT || '75');
-              const ticketId = notesObj.ticket_id || '-';
-
-              const opPriceStr = notesObj.op_price ? Number(notesObj.op_price).toFixed(2) : opPrice;
-              const tpPriceStr = notesObj.tp_price ? Number(notesObj.tp_price).toFixed(2) : '-';
-              const ringPts = notesObj.ring_pts || (process.env.NORMAL_RING_C1_POINTS || '-');
-              const filterStrategy = process.env.ACTIVE_FILTER_STRATEGY ? `FILTER ${process.env.ACTIVE_FILTER_STRATEGY}` : 'FILTER B';
-
-              caption =
-                `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
+            caption = 
+                `🔥 *SYNC SIGNAL DETECTED* 🔥\n` +
                 `----------------------------------\n` +
                 `📌 *Pair:* ${signal.symbol}\n` +
-                `⏱️ *TF:* ${signal.timeframe}\n` +
-                `📊 *Strategy:* ${filterStrategy}\n\n` +
-                `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} LIMIT)\n` +
-                `🛑 *SL:* ${slPriceNotes} (Ring ${ringPts} pts)\n` +
-                `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
-                `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                `🔄 *Sync:* ${syncText}\n` +
+                `📈 *Direction:* ${modeEmoji} ${mode}\n` +
                 `----------------------------------\n` +
-                `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+                `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
+          } else if (signal.ticket_id && signal.ticket_id.startsWith('INFO_')) {
+            const infoTf = signal.ticket_id.replace('INFO_', '');
+            caption = 
+                `ℹ️ *INFO SIGNAL [${infoTf}]* ℹ️\n` +
+                `----------------------------------\n` +
+                `📌 *Pair:* ${signal.symbol}\n` +
+                `📈 *Direction:* ${modeEmoji} ${mode}\n` +
+                `📊 *Pattern:* ${signal.pattern_type.replace('_', ' ')}\n` +
+                `----------------------------------\n` +
+                `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
+          } else {
+            const opPrice = signal.curr_close.toFixed(2);
+            const slPrice = isBuy ? signal.curr_low.toFixed(2) : signal.curr_high.toFixed(2);
 
-            } catch (e) {
-              console.log('Notes is not JSON or failed to parse, falling back to basic format.');
+            if (signal.notes) {
+              try {
+                const notesObj = JSON.parse(signal.notes);
+
+                const actionStr = notesObj.action_str || mode;
+                const grade = notesObj.grade || '-';
+                const bPct = notesObj.body_pct || 0;
+                const cpPct = notesObj.cp_pct || 0;
+                const rr = notesObj.rr_ratio || 1.5;
+                const slPriceNotes = notesObj.sl_price || slPrice;
+                const slPctUsed = notesObj.sl_pct_used !== undefined ? notesObj.sl_pct_used : (process.env.EXECUTION_SL_PCT || '75');
+                const ticketId = notesObj.ticket_id || '-';
+
+                const opPriceStr = notesObj.op_price ? Number(notesObj.op_price).toFixed(2) : opPrice;
+                const tpPriceStr = notesObj.tp_price ? Number(notesObj.tp_price).toFixed(2) : '-';
+                const ringPts = notesObj.ring_pts || (process.env.NORMAL_RING_C1_POINTS || '-');
+                const filterStrategy = process.env.ACTIVE_FILTER_STRATEGY ? `FILTER ${process.env.ACTIVE_FILTER_STRATEGY}` : 'FILTER B';
+
+                  caption =
+                    `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
+                    `----------------------------------\n` +
+                    `📌 *Pair:* ${signal.symbol}\n` +
+                    `⏱️ *TF:* ${signal.timeframe}\n` +
+                    `📊 *Strategy:* ${filterStrategy}\n\n` +
+                    `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} LIMIT)\n` +
+                    `🛑 *HEDGE (OP-2):* ${slPriceNotes} (Ring ${ringPts} pts)\n` +
+                    `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
+                    `ℹ️ _Catatan: SL = 0. Digantikan oleh Pending Order Hedging._\n` +
+                    `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                    `----------------------------------\n` +
+                    `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+
+              } catch (e) {
+                console.log('Notes is not JSON or failed to parse, falling back to basic format.');
+                caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice} | Sesi: ${signal.trading_session || '-'}`;
+              }
+            } else {
               caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice} | Sesi: ${signal.trading_session || '-'}`;
             }
-          } else {
-            caption = `Engulfing | ${signal.symbol} | ${signal.timeframe} | ${mode} | ${opPrice} | Sesi: ${signal.trading_session || '-'}`;
           }
 
           await enqueueWaMessage({
