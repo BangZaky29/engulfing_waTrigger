@@ -557,6 +557,15 @@ function setupSupabaseListeners() {
                 `📈 *Direction:* ${modeEmoji} ${mode}\n` +
                 `----------------------------------\n` +
                 `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
+          } else if (notesObj.ticket_id === 'INFO_ACTIVE') {
+            caption = 
+                `⚠️ *SKIPPED (POSISI AKTIF)* ⚠️\n` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `📌 *Pair:* ${signal.symbol}\n` +
+                `⏱️ *TF:* ${signal.timeframe}\n` +
+                `📈 *Trigger:* ${modeEmoji} ${mode}\n` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `_Sinyal baru masuk, tapi dieksekusi SKIP karena OP sebelumnya belum clear (belum kena TP/SL)._`;
           } else if (notesObj.ticket_id && typeof notesObj.ticket_id === 'string' && notesObj.ticket_id.startsWith('INFO_')) {
             const infoTf = notesObj.ticket_id.replace('INFO_', '');
             caption = 
@@ -589,16 +598,17 @@ function setupSupabaseListeners() {
                 const ringPts = notesObj.ring_pts || (process.env.NORMAL_RING_C1_POINTS || '-');
                 const filterStrategy = process.env.ACTIVE_FILTER_STRATEGY ? `FILTER ${process.env.ACTIVE_FILTER_STRATEGY}` : 'FILTER B';
 
+                const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
+
                   caption =
                     `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
                     `----------------------------------\n` +
                     `📌 *Pair:* ${signal.symbol}\n` +
                     `⏱️ *TF:* ${signal.timeframe}\n` +
                     `📊 *Strategy:* ${filterStrategy}\n\n` +
-                    `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} LIMIT)\n` +
-                    `🛑 *HEDGE (OP-2):* ${slPriceNotes} (Ring ${ringPts} pts)\n` +
+                    `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
+                    `🛑 *SL:* ${slPriceNotes} (Risk $${riskUsd})\n` +
                     `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
-                    `ℹ️ _Catatan: SL = 0. Digantikan oleh Pending Order Hedging._\n` +
                     `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
                     `----------------------------------\n` +
                     `⚠️ _Harap gunakan manajemen risiko yang baik_`;
