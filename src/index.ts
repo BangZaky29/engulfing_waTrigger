@@ -519,7 +519,31 @@ function setupSupabaseListeners() {
           let notesObj: any = {};
           try { notesObj = JSON.parse(signal.notes || '{}'); } catch (e) {}
 
-          if (notesObj.ticket_id === 'INFO_SYNC') {
+          if (notesObj.ticket_id === 'TFM_STATUS_CHANGE') {
+            // =====================================================
+            // TF Monitor Status Change Notification
+            // =====================================================
+            const tfmStatus = notesObj.tfm_status || 'WAIT';
+            const tfmBias = notesObj.tfm_bias || 'Wait';
+            const tfmSnapshot = notesObj.tfm_snapshot || '';
+
+            const statusEmojiMap: Record<string, string> = {
+              'STRONG': '🟢🔥', 'VALID': '🟢', 'EARLY': '🟡',
+              'LATE': '🔴', 'WAIT': '⏸️'
+            };
+            const statusEmoji = statusEmojiMap[tfmStatus] || '❓';
+
+            const biasEmoji = tfmBias.includes('Buy') ? '📈' : tfmBias.includes('Sell') ? '📉' : '➡️';
+
+            caption = 
+                `📡 *TF MONITOR UPDATE* 📡\n` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `${statusEmoji} *Status:* ${tfmStatus}\n` +
+                `${biasEmoji} *Bias:* ${tfmBias}\n\n` +
+                `${tfmSnapshot}\n` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `📌 *Pair:* ${signal.symbol}`;
+          } else if (notesObj.ticket_id === 'INFO_SYNC') {
             let syncText = signal.timeframe; // e.g. SYNC_M15_H1
             if (notesObj.sync_with) {
               syncText = syncText.replace('SYNC_', '').replace('_', ' & ');
