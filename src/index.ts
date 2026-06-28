@@ -582,8 +582,7 @@ function setupSupabaseListeners() {
 
             if (signal.notes) {
               try {
-                const notesObj = JSON.parse(signal.notes);
-
+                // ⚠️ Gunakan notesObj yang sudah di-parse di atas (line 520), bukan di-parse ulang
                 const actionStr = notesObj.action_str || mode;
                 const grade = notesObj.grade || '-';
                 const bPct = notesObj.body_pct || 0;
@@ -598,20 +597,30 @@ function setupSupabaseListeners() {
                 const ringPts = notesObj.ring_pts || (process.env.NORMAL_RING_C1_POINTS || '-');
                 const filterStrategy = process.env.ACTIVE_FILTER_STRATEGY ? `FILTER ${process.env.ACTIVE_FILTER_STRATEGY}` : 'FILTER B';
 
+                // ✅ sl_source & sl_pct dibaca dari notesObj (sudah di-persist Python ke Supabase via notes)
+                const slSourceRaw = notesObj.sl_source || 'M5';
+                const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : 30;
+                const slSource = slSourceRaw === 'H1' ? `_(Dynamic H1 ${slPctVal}%)_` : `_(M5 Default)_`;
+
+                // ✅ h1_trigger_source kini dibaca dari notesObj (bukan signal field yang tidak ada di DB)
+                const h1TriggerRaw = notesObj.h1_trigger_source;
+                const h1TriggerLine = h1TriggerRaw ? `🔥 *Trigger H1:* ${h1TriggerRaw}\n\n` : '';
+
                 const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
 
-                  caption =
-                    `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
-                    `----------------------------------\n` +
-                    `📌 *Pair:* ${signal.symbol}\n` +
-                    `⏱️ *TF:* ${signal.timeframe}\n` +
-                    `📊 *Strategy:* ${filterStrategy}\n\n` +
-                    `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
-                    `🛑 *SL:* ${slPriceNotes} (Risk $${riskUsd})\n` +
-                    `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
-                    `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
-                    `----------------------------------\n` +
-                    `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+                caption =
+                  `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
+                  `----------------------------------\n` +
+                  `📌 *Pair:* ${signal.symbol}\n` +
+                  `⏱️ *TF:* ${signal.timeframe}\n` +
+                  `📊 *Strategy:* ${filterStrategy}\n` +
+                  (h1TriggerLine ? h1TriggerLine : `\n`) +
+                  `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
+                  `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
+                  `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
+                  `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                  `----------------------------------\n` +
+                  `⚠️ _Harap gunakan manajemen risiko yang baik_`;
 
               } catch (e) {
                 console.log('Notes is not JSON or failed to parse, falling back to basic format.');
