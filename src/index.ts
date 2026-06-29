@@ -631,6 +631,14 @@ function setupSupabaseListeners() {
                   ? `🔥 *Trigger H1:* ${h1TriggerRaw}${h1TriggerTime ? ` (${h1TriggerTime})` : ''}\n\n`
                   : '';
 
+                const m15TriggerRaw = notesObj.m15_trigger_source;
+                const m15TriggerTime = notesObj.m15_trigger_time;
+                const m15TriggerAge = typeof notesObj.m15_trigger_age === 'number' ? notesObj.m15_trigger_age : null;
+                const m15TriggerAgeSuffix = m15TriggerAge === 0 ? ' (N)' : m15TriggerAge ? ` (${m15TriggerAge})` : '';
+                const m15TriggerLine = m15TriggerRaw
+                  ? `🔥 *Trigger M15:* ${m15TriggerRaw}${m15TriggerTime ? ` (${m15TriggerTime})` : ''}${m15TriggerAgeSuffix}\n\n`
+                  : '';
+
                 const m5TriggerRaw = notesObj.m5_trigger_source;
                 const m5TriggerTime = notesObj.m5_trigger_time;
                 const m5TriggerLine = m5TriggerRaw
