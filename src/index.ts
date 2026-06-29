@@ -623,6 +623,8 @@ function setupSupabaseListeners() {
                 // ✅ h1_trigger_source kini dibaca dari notesObj (bukan signal field yang tidak ada di DB)
                 const h1TriggerRaw = notesObj.h1_trigger_source;
                 const h1TriggerLine = h1TriggerRaw ? `🔥 *Trigger H1:* ${h1TriggerRaw}\n\n` : '';
+                const m5TriggerRaw = notesObj.m5_trigger_source;
+                const m5TriggerLine = m5TriggerRaw ? `🔥 *Trigger M5:* ${m5TriggerRaw}\n\n` : '';
 
                 const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
 
@@ -633,6 +635,7 @@ function setupSupabaseListeners() {
                   `⏱️ *TF:* ${signal.timeframe}\n` +
                   `📊 *Strategy:* ${filterStrategy}\n` +
                   (h1TriggerLine ? h1TriggerLine : `\n`) +
+                  (m5TriggerLine ? m5TriggerLine : '') +
                   (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
                   `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
                   `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
