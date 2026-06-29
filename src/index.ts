@@ -27,6 +27,7 @@ if (fs.existsSync(pythonEnvPath)) {
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY!;
 const GROUP_JID = process.env.GROUP_JID!;
+const PRIVATE_JID = process.env.PRIVATE_JID || GROUP_JID;
 const SESSION_ID = 'main_session';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
@@ -412,7 +413,7 @@ function setupSupabaseListeners() {
             sourceId: trade.id,
             ticketId: trade.ticket_id,
             eventType: 'TRADE_CLOSED',
-            groupJid: GROUP_JID,
+            groupJid: PRIVATE_JID,
             messageType: trade.image_url ? 'IMAGE' : 'TEXT',
             message: caption,
             imageUrl: trade.image_url,
@@ -519,6 +520,17 @@ function setupSupabaseListeners() {
           let notesObj: any = {};
           try { notesObj = JSON.parse(signal.notes || '{}'); } catch (e) {}
 
+          const targetJid =
+            notesObj.ticket_id === 'TFM_STATUS_CHANGE' ||
+            notesObj.ticket_id === 'INFO_SYNC' ||
+            (typeof notesObj.ticket_id === 'string' &&
+              notesObj.ticket_id.startsWith('INFO_') &&
+              notesObj.ticket_id !== 'INFO_ACTIVE')
+              ? GROUP_JID
+              : PRIVATE_JID;
+
+          const tfmStatusLine = notesObj.tfm_status ? `📡 *TF Monitor:* ${notesObj.tfm_status}\n` : '';
+
           if (notesObj.ticket_id === 'TFM_STATUS_CHANGE') {
             // =====================================================
             // TF Monitor Status Change Notification
@@ -621,6 +633,7 @@ function setupSupabaseListeners() {
                   `⏱️ *TF:* ${signal.timeframe}\n` +
                   `📊 *Strategy:* ${filterStrategy}\n` +
                   (h1TriggerLine ? h1TriggerLine : `\n`) +
+                  (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
                   `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
                   `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
                   `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
@@ -643,7 +656,7 @@ function setupSupabaseListeners() {
             sourceId: signal.id,
             ticketId: signal.ticket_id || null,
             eventType: 'TRADE_SIGNAL',
-            groupJid: GROUP_JID,
+            groupJid: targetJid,
             messageType: 'TEXT',
             message: caption,
             payload: signal,
