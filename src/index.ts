@@ -686,8 +686,8 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
   const MAX_RETRY = 5;
   const RETRY_DELAY = 3000; // 3 detik per retry
 
-  if (!sock || !GROUP_JID) {
-    console.log(`[STARTUP] sock atau GROUP_JID belum siap, skip.`);
+  if (!sock || !GROUP_JID || !PRIVATE_JID) {
+    console.log(`[STARTUP] sock atau GROUP_JID/PRIVATE_JID belum siap, skip.`);
     return;
   }
 
@@ -730,7 +730,7 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       `✅ Laporan otomatis terjadwal\n\n` +
       `_Bot akan mengirim notifikasi OP jika market memenuhi kriteria di atas._ 🚀`;
 
-    console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID} (attempt ${retryCount + 1}/${MAX_RETRY})...`);
+    console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID} dan ${PRIVATE_JID} (attempt ${retryCount + 1}/${MAX_RETRY})...`);
 
     // WARMUP: Pancing Baileys untuk mengambil metadata grup agar session crypto ter-sinkron
     try {
@@ -741,6 +741,9 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
     }
 
     await sock.sendMessage(GROUP_JID, { text: startupMsg });
+    if (PRIVATE_JID !== GROUP_JID) {
+      await sock.sendMessage(PRIVATE_JID, { text: startupMsg });
+    }
     console.log('[STARTUP] ✅ Notifikasi startup BERHASIL dikirim ke grup WA!');
 
   } catch (e: any) {
@@ -1045,9 +1048,9 @@ process.on('SIGINT', async () => {
   console.log(`[SYSTEM] Sesi berjalan dari ${SESSION_START_TIME.toLocaleTimeString('id-ID')} → ${shutdownTime.toLocaleTimeString('id-ID')}`);
   console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
 
-  if (sock && GROUP_JID) {
+  if (sock && PRIVATE_JID) {
     try {
-      await generateAndSendPDF(sock, 'SHUTDOWN', GROUP_JID, SESSION_START_TIME, shutdownTime);
+      await generateAndSendPDF(sock, 'SHUTDOWN', PRIVATE_JID, SESSION_START_TIME, shutdownTime);
     } catch (e) {
       console.error('[SYSTEM] Gagal mengirim Shutdown Report:', e);
     }
