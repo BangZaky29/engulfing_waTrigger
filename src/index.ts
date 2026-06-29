@@ -587,10 +587,16 @@ function setupSupabaseListeners() {
                 const grade = notesObj.grade || '-';
                 const bPct = notesObj.body_pct || 0;
                 const cpPct = notesObj.cp_pct || 0;
-                const rr = notesObj.rr_ratio || 1.5;
+                const rr = notesObj.rr_ratio || 1.0;
                 const slPriceNotes = notesObj.sl_price || slPrice;
                 const slPctUsed = notesObj.sl_pct_used !== undefined ? notesObj.sl_pct_used : (process.env.EXECUTION_SL_PCT || '75');
-                const ticketId = notesObj.ticket_id || '-';
+                const ticketIdRaw = signal.ticket_id ?? notesObj.ticket_id;
+                const ticketId = ticketIdRaw != null && ticketIdRaw !== '' && ticketIdRaw !== '-'
+                  && !String(ticketIdRaw).startsWith('INFO_')
+                  && ticketIdRaw !== 'TFM_STATUS_CHANGE'
+                  ? String(ticketIdRaw)
+                  : null;
+                const ticketLine = ticketId ? `🎫 *Ticket:* ${ticketId}\n` : '';
 
                 const opPriceStr = notesObj.op_price ? Number(notesObj.op_price).toFixed(2) : opPrice;
                 const tpPriceStr = notesObj.tp_price ? Number(notesObj.tp_price).toFixed(2) : '-';
@@ -620,6 +626,7 @@ function setupSupabaseListeners() {
                   `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
                   `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
                   `----------------------------------\n` +
+                  (ticketLine ? `${ticketLine}` : '') +
                   `⚠️ _Harap gunakan manajemen risiko yang baik_`;
 
               } catch (e) {
