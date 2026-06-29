@@ -654,6 +654,7 @@ function setupSupabaseListeners() {
                   `⏱️ *TF:* ${signal.timeframe}\n` +
                   `📊 *Strategy:* ${filterStrategy}\n` +
                   (h1TriggerLine ? h1TriggerLine : `\n`) +
+                  (m15TriggerLine ? m15TriggerLine : '') +
                   (m5TriggerLine ? m5TriggerLine : '') +
                   (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
                   `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
