@@ -579,12 +579,34 @@ function setupSupabaseListeners() {
                 `----------------------------------\n` +
                 `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
           } else if (notesObj.ticket_id === 'INFO_ACTIVE') {
+            const skipReasons: string[] = Array.isArray(notesObj.skip_reasons)
+              ? notesObj.skip_reasons
+              : notesObj.skip_reason
+                ? [notesObj.skip_reason]
+                : [];
+            const reasonLines = skipReasons.length > 0
+              ? skipReasons.map((r) => `• ${r}`).join('\n') + '\n'
+              : '• Alasan skip tidak tersedia\n';
+
+            const h1TriggerRaw = notesObj.h1_trigger_source || '-';
+            const h1TriggerTime = notesObj.h1_trigger_time ? ` (${notesObj.h1_trigger_time})` : '';
+            const m15TriggerRaw = notesObj.m15_trigger_source || '-';
+            const m15TriggerTime = notesObj.m15_trigger_time ? ` (${notesObj.m15_trigger_time})` : '';
+            const m5TriggerRaw = notesObj.m5_trigger_source || '-';
+            const m5TriggerTime = notesObj.m5_trigger_time ? ` (${notesObj.m5_trigger_time})` : '';
+
             caption = 
                 `⚠️ *SKIPPED (POSISI AKTIF)* ⚠️\n` +
                 `━━━━━━━━━━━━━━━━━\n` +
                 `📌 *Pair:* ${signal.symbol}\n` +
                 `⏱️ *TF:* ${signal.timeframe}\n` +
                 `📈 *Trigger:* ${modeEmoji} ${mode}\n` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `🔎 *Alasan:*\n${reasonLines}` +
+                `━━━━━━━━━━━━━━━━━\n` +
+                `🔥 *H1 Trigger:* ${h1TriggerRaw}${h1TriggerTime}\n` +
+                `🔥 *M15 Trigger:* ${m15TriggerRaw}${m15TriggerTime}\n` +
+                `🔥 *M5 Trigger:* ${m5TriggerRaw}${m5TriggerTime}\n` +
                 `━━━━━━━━━━━━━━━━━\n` +
                 `_Sinyal baru masuk, tapi dieksekusi SKIP karena OP sebelumnya belum clear (belum kena TP/SL)._`;
           } else if (notesObj.ticket_id && typeof notesObj.ticket_id === 'string' && notesObj.ticket_id.startsWith('INFO_')) {
