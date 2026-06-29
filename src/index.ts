@@ -624,7 +624,9 @@ function setupSupabaseListeners() {
                 const h1TriggerRaw = notesObj.h1_trigger_source;
                 const h1TriggerLine = h1TriggerRaw ? `🔥 *Trigger H1:* ${h1TriggerRaw}\n\n` : '';
                 const m5TriggerRaw = notesObj.m5_trigger_source;
-                const m5TriggerLine = m5TriggerRaw ? `🔥 *Trigger M5:* ${m5TriggerRaw}\n\n` : '';
+                const m5TriggerLine = m5TriggerRaw
+                  ? `🔥 *M5 Trigger:* ${m5TriggerRaw.replace(/^Multi:/, '').replace(/\+/g, ' / ')}\n\n`
+                  : '';
 
                 const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
 
