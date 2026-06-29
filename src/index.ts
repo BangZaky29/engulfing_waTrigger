@@ -684,7 +684,7 @@ function setupSupabaseListeners() {
             sourceId: signal.id,
             ticketId: signal.ticket_id || null,
             eventType: 'TRADE_SIGNAL',
-            groupJid: targetJid,
+            groupJid: finalTargetJid,
             messageType: 'TEXT',
             message: caption,
             payload: signal,
