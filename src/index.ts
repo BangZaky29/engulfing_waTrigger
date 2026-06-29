@@ -594,6 +594,9 @@ function setupSupabaseListeners() {
             const m15TriggerTime = notesObj.m15_trigger_time ? ` (${notesObj.m15_trigger_time})` : '';
             const m5TriggerRaw = notesObj.m5_trigger_source || '-';
             const m5TriggerTime = notesObj.m5_trigger_time ? ` (${notesObj.m5_trigger_time})` : '';
+            const activePositionInfo = notesObj.active_position_info || null;
+            const activePositionLine = activePositionInfo
+              ? `📌 *Posisi Aktif:* ${activePositionInfo}\n` : '';
 
             caption = 
                 `⚠️ *SKIPPED (POSISI AKTIF)* ⚠️\n` +
@@ -603,6 +606,7 @@ function setupSupabaseListeners() {
                 `📈 *Trigger:* ${modeEmoji} ${mode}\n` +
                 `━━━━━━━━━━━━━━━━━\n` +
                 `🔎 *Alasan:*\n${reasonLines}` +
+                `${activePositionLine}` +
                 `━━━━━━━━━━━━━━━━━\n` +
                 `🔥 *H1 Trigger:* ${h1TriggerRaw}${h1TriggerTime}\n` +
                 `🔥 *M15 Trigger:* ${m15TriggerRaw}${m15TriggerTime}\n` +
