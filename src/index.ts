@@ -520,6 +520,8 @@ function setupSupabaseListeners() {
           let notesObj: any = {};
           try { notesObj = JSON.parse(signal.notes || '{}'); } catch (e) {}
 
+          const isSkippedSignal = !!signal.skip_reason;
+
           const targetJid =
             notesObj.ticket_id === 'TFM_STATUS_CHANGE' ||
             notesObj.ticket_id === 'INFO_SYNC' ||
@@ -528,6 +530,8 @@ function setupSupabaseListeners() {
               notesObj.ticket_id !== 'INFO_ACTIVE')
               ? GROUP_JID
               : PRIVATE_JID;
+
+          const finalTargetJid = isSkippedSignal ? PRIVATE_JID : targetJid;
 
           const tfmStatusLine = notesObj.tfm_status ? `📡 *TF Monitor:* ${notesObj.tfm_status}\n` : '';
 
@@ -620,12 +624,17 @@ function setupSupabaseListeners() {
                 const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : 30;
                 const slSource = slSourceRaw === 'H1' ? `_(Dynamic H1 ${slPctVal}%)_` : `_(M5 Default)_`;
 
-                // ✅ h1_trigger_source kini dibaca dari notesObj (bukan signal field yang tidak ada di DB)
+                // ✅ h1_trigger_source dan trigger time kini dibaca dari notesObj
                 const h1TriggerRaw = notesObj.h1_trigger_source;
-                const h1TriggerLine = h1TriggerRaw ? `🔥 *Trigger H1:* ${h1TriggerRaw}\n\n` : '';
+                const h1TriggerTime = notesObj.h1_trigger_time;
+                const h1TriggerLine = h1TriggerRaw
+                  ? `🔥 *Trigger H1:* ${h1TriggerRaw}${h1TriggerTime ? ` (${h1TriggerTime})` : ''}\n\n`
+                  : '';
+
                 const m5TriggerRaw = notesObj.m5_trigger_source;
+                const m5TriggerTime = notesObj.m5_trigger_time;
                 const m5TriggerLine = m5TriggerRaw
-                  ? `🔥 *M5 Trigger:* ${m5TriggerRaw.replace(/^Multi:/, '').replace(/\+/g, ' / ')}\n\n`
+                  ? `🔥 *M5 Trigger:* ${m5TriggerRaw.replace(/^Multi:/, '').replace(/\+/g, ' / ')}${m5TriggerTime ? ` (${m5TriggerTime})` : ''}\n\n`
                   : '';
 
                 const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
