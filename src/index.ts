@@ -531,7 +531,12 @@ function setupSupabaseListeners() {
               ? GROUP_JID
               : PRIVATE_JID;
 
-          const finalTargetJid = isSkippedSignal ? PRIVATE_JID : targetJid;
+          const finalTargetJid =
+            notesObj.ticket_id === 'INFO_ACTIVE'
+              ? GROUP_JID
+              : isSkippedSignal
+              ? PRIVATE_JID
+              : targetJid;
 
           const tfmStatusLine = notesObj.tfm_status ? `📡 *TF Monitor:* ${notesObj.tfm_status}\n` : '';
 
