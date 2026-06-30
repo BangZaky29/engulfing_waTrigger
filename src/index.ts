@@ -29,6 +29,8 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_AN
 const GROUP_JID = process.env.GROUP_JID!;
 const PRIVATE_JID = process.env.PRIVATE_JID || GROUP_JID;
 const SKIP_SIGNAL = process.env.SKIP_SIGNAL || GROUP_JID;
+const PROFIT_SIGNAL = process.env.PROFIT_SIGNAL || GROUP_JID;
+const LOSS_SIGNAL = process.env.LOSS_SIGNAL || GROUP_JID;
 const SESSION_ID = 'main_session';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
@@ -115,6 +117,7 @@ async function enqueueWaMessage(input: {
     input.sourceTable,
     input.ticketId ?? input.sourceId ?? 'noid',
     input.eventType,
+    input.groupJid,
     input.messageType,
   ].join(':');
 
@@ -409,12 +412,14 @@ function setupSupabaseListeners() {
             `━━━━━━━━━━━━━━━━━\n` +
             `🎫 *Ticket:* ${trade.ticket_id}`;
 
+          const targetGroup = trade.result?.toUpperCase() === 'PROFIT' ? PROFIT_SIGNAL : LOSS_SIGNAL;
+
           await enqueueWaMessage({
             sourceTable: 'trade_analytics',
             sourceId: trade.id,
             ticketId: trade.ticket_id,
             eventType: 'TRADE_CLOSED',
-            groupJid: PRIVATE_JID,
+            groupJid: targetGroup,
             messageType: trade.image_url ? 'IMAGE' : 'TEXT',
             message: caption,
             imageUrl: trade.image_url,
