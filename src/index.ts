@@ -785,7 +785,7 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       `✅ Laporan otomatis terjadwal\n\n` +
       `_Bot akan mengirim notifikasi OP jika market memenuhi kriteria di atas._ 🚀`;
 
-    console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID} dan ${PRIVATE_JID} (attempt ${retryCount + 1}/${MAX_RETRY})...`);
+    console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID}, ${PRIVATE_JID}, dan ${SKIP_SIGNAL} (attempt ${retryCount + 1}/${MAX_RETRY})...`);
 
     // WARMUP: Pancing Baileys untuk mengambil metadata grup agar session crypto ter-sinkron
     try {
@@ -799,6 +799,9 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
     if (PRIVATE_JID !== GROUP_JID) {
       await sock.sendMessage(PRIVATE_JID, { text: startupMsg });
     }
+    if (SKIP_SIGNAL !== GROUP_JID && SKIP_SIGNAL !== PRIVATE_JID) {
+      await sock.sendMessage(SKIP_SIGNAL, { text: startupMsg });
+    }
     console.log('[STARTUP] ✅ Notifikasi startup BERHASIL dikirim ke grup WA!');
 
   } catch (e: any) {
@@ -810,6 +813,23 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
       await sendStartupMessage(retryCount + 1);
     } else {
       console.error('[STARTUP] ❌ Semua retry habis. Startup message tidak terkirim.');
+    }
+  }
+}
+
+async function sendShutdownMessage(message: string): Promise<void> {
+  if (!sock) {
+    console.log('[SHUTDOWN] Socket belum siap, skip kirim shutdown message.');
+    return;
+  }
+
+  const targets = [GROUP_JID, PRIVATE_JID, SKIP_SIGNAL].filter((jid, index, arr) => jid && arr.indexOf(jid) === index);
+  for (const groupJid of targets) {
+    try {
+      await sock.sendMessage(groupJid, { text: message });
+      console.log(`[SHUTDOWN] Pesan mati dikirim ke ${groupJid}`);
+    } catch (e: any) {
+      console.error(`[SHUTDOWN] Gagal kirim pesan ke ${groupJid}: ${e?.message || e}`);
     }
   }
 }
@@ -1102,6 +1122,14 @@ process.on('SIGINT', async () => {
   console.log('\n[SYSTEM] Menerima sinyal Shutdown (Ctrl+C)...');
   console.log(`[SYSTEM] Sesi berjalan dari ${SESSION_START_TIME.toLocaleTimeString('id-ID')} → ${shutdownTime.toLocaleTimeString('id-ID')}`);
   console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
+
+  if (sock) {
+    await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
+  }
+
+  if (sock) {
+    await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
+  }
 
   if (sock && PRIVATE_JID) {
     try {
