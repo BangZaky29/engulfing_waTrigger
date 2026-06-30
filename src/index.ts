@@ -28,6 +28,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY!;
 const GROUP_JID = process.env.GROUP_JID!;
 const PRIVATE_JID = process.env.PRIVATE_JID || GROUP_JID;
+const SKIP_SIGNAL = process.env.SKIP_SIGNAL || GROUP_JID;
 const SESSION_ID = 'main_session';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
@@ -481,7 +482,7 @@ function setupSupabaseListeners() {
             sourceId: log.id,
             ticketId: log.ticket_id,
             eventType: 'TRADE_ACTIVE',
-            groupJid: GROUP_JID,
+            groupJid: SKIP_SIGNAL,
             messageType: log.image_url ? 'IMAGE' : 'TEXT',
             message: caption,
             imageUrl: log.image_url,
@@ -533,9 +534,9 @@ function setupSupabaseListeners() {
 
           const finalTargetJid =
             notesObj.ticket_id === 'INFO_ACTIVE'
-              ? GROUP_JID
+              ? SKIP_SIGNAL
               : isSkippedSignal
-              ? PRIVATE_JID
+              ? SKIP_SIGNAL
               : targetJid;
 
           const tfmStatusLine = notesObj.tfm_status ? `📡 *TF Monitor:* ${notesObj.tfm_status}\n` : '';
@@ -740,8 +741,8 @@ async function sendStartupMessage(retryCount = 0): Promise<void> {
   const MAX_RETRY = 5;
   const RETRY_DELAY = 3000; // 3 detik per retry
 
-  if (!sock || !GROUP_JID || !PRIVATE_JID) {
-    console.log(`[STARTUP] sock atau GROUP_JID/PRIVATE_JID belum siap, skip.`);
+  if (!sock || !GROUP_JID || !PRIVATE_JID || !SKIP_SIGNAL) {
+    console.log(`[STARTUP] sock atau GROUP_JID/PRIVATE_JID/SKIP_SIGNAL belum siap, skip.`);
     return;
   }
 
