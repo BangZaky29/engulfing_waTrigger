@@ -452,7 +452,8 @@ function setupSupabaseListeners() {
 
                 extraInfo += `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n`;
                 extraInfo += `🛑 *SL:* ${slPriceStr} ${slSource}\n`;
-                extraInfo += `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n`;
+                const targetUsd = notesObj.target_usd ? notesObj.target_usd : 8.0;
+                extraInfo += `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n\n`;
               }
             } catch (e) {
               console.error('Error fetching/parsing notes for trade result:', e);
@@ -742,6 +743,7 @@ function setupSupabaseListeners() {
                   : '';
 
                 const riskUsd = process.env.EXECUTION_FIXED_MONEY_USD || '10';
+                const targetUsd = notesObj.target_usd ? notesObj.target_usd : 8.0;
 
                 caption =
                   `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
@@ -755,7 +757,7 @@ function setupSupabaseListeners() {
                   (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
                   `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
                   `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
-                  `🎯 *TP:* ${tpPriceStr} (RR 1:${rr})\n\n` +
+                  `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n\n` +
                   `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
                   `----------------------------------\n` +
                   (ticketLine ? `${ticketLine}` : '') +
