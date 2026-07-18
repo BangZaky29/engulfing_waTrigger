@@ -4,16 +4,26 @@ import { handleEngulfingSignal } from './signalHandler';
 import { handleActiveLog } from './activeLogHandler';
 import { handleTradeResult } from './tradeResultHandler';
 
-export function setupSupabaseListeners() {
+let isRetrying = false;
+
+export async function setupSupabaseListeners() {
+  console.log('[LISTENER] Membersihkan channel lama (jika ada)...');
+  await supabase.removeAllChannels();
+  
   console.log('[LISTENER] Mendaftarkan Supabase Realtime listeners...');
 
   function scheduleListenerRetry(channelName: string, delayMs = 30000) {
-    console.warn(`[LISTENER] ⚠️ ${channelName} CHANNEL_ERROR. Retry dalam ${delayMs / 1000}s...`);
+    console.warn(`[LISTENER] ⚠️ ${channelName} CHANNEL_ERROR.`);
+    if (isRetrying) return;
+    
+    isRetrying = true;
+    console.warn(`[LISTENER] ⏳ Menjadwalkan re-subscribe dalam ${delayMs / 1000}s...`);
     resetListenersRegistered(); 
-    setTimeout(() => {
+    setTimeout(async () => {
+      isRetrying = false;
       if (isWaReady()) {
         console.log(`[LISTENER] 🔄 Re-subscribing semua listeners setelah CHANNEL_ERROR...`);
-        setupSupabaseListeners();
+        await setupSupabaseListeners();
       } else {
         console.log(`[LISTENER] WA belum ready saat retry, skip re-subscribe.`);
       }
