@@ -7,7 +7,7 @@ import { acquireLock, startLockHeartbeat } from './lockManager';
 import { delay } from '../utils/helpers';
 import { SESSION_ID, GROUP_JID } from '../config/env';
 // Import removed to prevent circular dependency
-import { startCronJobs } from '../cronScheduler';
+import { startAllCronJobs } from '../cron/cronManager';
 import { processOutbox } from './outboxService';
 import { sendStartupMessage } from '../handlers/systemHandler';
 
@@ -168,7 +168,7 @@ export async function connectToWhatsApp() {
 
       if (!cronStarted) {
         cronStarted = true;
-        startCronJobs(sock, GROUP_JID);
+        startAllCronJobs(sock, GROUP_JID);
       }
 
       processOutbox(sock, isWaReady, INSTANCE_ID);
