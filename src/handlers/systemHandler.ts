@@ -32,6 +32,16 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
     const activeFilter = process.env.ACTIVE_FILTER_STRATEGY ? `Filter ${process.env.ACTIVE_FILTER_STRATEGY.split('#')[0].trim()}` : 'Filter B';
     const minGradeInfo = (process.env.MIN_GRADE_ALLOWED || 'C+').split('#')[0].trim();
 
+    // === Trading Schedule Info ===
+    const tradingEnabled = process.env.TRADING_ACTIVE_ENABLED?.toLowerCase() === 'true';
+    const tradingStart = process.env.TRADING_ACTIVE_START || '15:00';
+    const tradingEnd = process.env.TRADING_ACTIVE_END || '04:00';
+
+    const tradingScheduleBlock = tradingEnabled
+      ? `🟢 *Execute:* AKTIF (${tradingStart} → ${tradingEnd} WIB)\n` +
+        `🔸 Di luar jam: scan only, tanpa execute`
+      : `🟡 *Execute:* SELALU AKTIF (schedule belum diset)`;
+
     const startupMsg =
       `🟢 *SISTEM AKTIF* 🟢\n\n` +
       `🤖 *Engulfing Analytics Bot* telah berhasil dinyalakan dan siap beroperasi.\n\n` +
@@ -39,12 +49,22 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
       `📅 Tanggal : ${tgl}\n` +
       `🕐 Waktu   : ${jam} WIB\n` +
       `━━━━━━━━━━━━━━━━━\n\n` +
-      `⚙️ *KONFIGURASI AKTIF:*\n` +
+      `⚙️ *KONFIGURASI SCANNER:*\n` +
       `🔸 *Pairs:* ${pairs}\n` +
       `🔸 *Execute TF:* ${tfInfo}\n` +
       `🔸 *Info TFs:* ${infoTfs}\n` +
       `🔸 *Strategy:* ${activeFilter}\n` +
       `🔸 *Min Grade:* ${minGradeInfo}\n\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      `⏰ *JAM TRADING:*\n` +
+      `${tradingScheduleBlock}\n\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      `📊 *LAPORAN OTOMATIS:*\n` +
+      `🔸 Harian   : 23:59 WIB\n` +
+      `🔸 Mingguan : Minggu 23:58 WIB\n` +
+      `🔸 Bulanan  : Akhir bulan 23:57 WIB\n` +
+      `🔸 Tahunan  : 31 Des 23:56 WIB\n\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
       `✅ Multi-Currency Scanner aktif\n` +
       `✅ Listener sinyal Realtime aktif\n` +
       `✅ Laporan otomatis terjadwal\n\n` +
