@@ -7,7 +7,7 @@
 
 import { CronJobDefinition, CronContext } from '../types';
 import { CRON_CONFIG } from '../cronConfig';
-import { generateAndSendPDF } from '../../pdfService';
+import { generateAndSendPDF } from '../../services/pdfReportService';
 
 const monthlyReportJob: CronJobDefinition = {
   name: 'monthlyReport',

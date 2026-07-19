@@ -1,7 +1,7 @@
 import { connectToWhatsApp, heartbeatInterval, INSTANCE_ID, sock, waConnectionState, setOnSocketReady } from './services/waSocket';
 import { processOutbox } from './services/outboxService';
 import { sendShutdownMessage } from './handlers/systemHandler';
-import { generateAndSendPDF } from './pdfService';
+import { generateAndSendPDF } from './services/pdfReportService';
 import { supabase } from './services/supabaseClient';
 import { releaseLock } from './services/lockManager';
 import { SESSION_ID, PRIVATE_JID } from './config/env';

@@ -2,7 +2,7 @@ import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion } from '@whis
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import { supabase } from './supabaseClient';
-import { useSupabaseAuthState } from '../supabaseAuthState';
+import { useSupabaseAuthState } from './supabaseAuthState';
 import { acquireLock, startLockHeartbeat } from './lockManager';
 import { delay } from '../utils/helpers';
 import { SESSION_ID, GROUP_JID } from '../config/env';
