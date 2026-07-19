@@ -136,7 +136,8 @@ export async function handleEngulfingSignal(payload: any) {
           const slPriceNotes = notesObj.sl_price || slPrice;
 
           const slSourceRaw = notesObj.sl_source || 'M5';
-          const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : 30;
+          const defaultSlPct = process.env.EXECUTION_SL_PCT_B || '50';
+          const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : Number(defaultSlPct);
           const slSource = slSourceRaw === 'H1' ? `_(Dynamic H1 ${slPctVal}%)_` : `_(M5 Default)_`;
 
           const h1TriggerRaw = notesObj.h1_trigger_source;
@@ -159,25 +160,69 @@ export async function handleEngulfingSignal(payload: any) {
             ? `🔥 *M5 Trigger:* ${m5TriggerRaw.replace(/^Multi:/, '').replace(/\+/g, ' / ')}${m5TriggerTime ? ` (${m5TriggerTime})` : ''}\n\n`
             : '';
 
-          const targetUsd = notesObj.target_usd ? notesObj.target_usd : 8.0;
+          const defaultTpUsd = process.env.EXECUTION_TP_TARGET_USD_B || '70.0';
+          const targetUsd = notesObj.target_usd ? notesObj.target_usd : Number(defaultTpUsd);
 
-          caption =
-            `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
-            `----------------------------------\n` +
-            `📌 *Pair:* ${signal.symbol}\n` +
-            `⏱️ *TF:* ${signal.timeframe}\n` +
-            `📊 *Strategy:* ${filterStrategy}\n` +
-            (h1TriggerLine ? h1TriggerLine : `\n`) +
-            (m15TriggerLine ? m15TriggerLine : '') +
-            (m5TriggerLine ? m5TriggerLine : '') +
-            (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
-            `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n` +
-            `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
-            `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n\n` +
-            `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
-            `----------------------------------\n` +
-            (ticketLine ? `${ticketLine}` : '') +
-            `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+          const isLimit = process.env.EXECUTION_USE_LIMIT?.toLowerCase() === 'true';
+          const orderType = isLimit ? 'LIMIT' : 'MARKET';
+
+          const cleanSym = signal.symbol.replace(/ /g, '_').replace(/-/g, '_');
+          let lotSize = process.env[`LOT_${cleanSym}`] || process.env[`LOT_${signal.symbol}`];
+          if (!lotSize) {
+              if (signal.symbol === 'BTC' || signal.symbol === 'BTCUSD') lotSize = process.env.LOT_Bitcoin;
+              else if (signal.symbol === 'NASDAQ-100' || signal.symbol === 'US100' || signal.symbol === 'USTEC') lotSize = process.env.LOT_US_Tech_100_index || process.env.LOT_NASDAQ_100;
+          }
+          lotSize = lotSize || process.env.EXECUTION_LOT_SIZE || '0.01';
+
+          if (isSkippedSignal) {
+             const skipReasons: string[] = Array.isArray(notesObj.skip_reasons)
+                ? notesObj.skip_reasons
+                : signal.skip_reason
+                  ? [signal.skip_reason]
+                  : [];
+             const reasonLines = skipReasons.length > 0
+                ? skipReasons.map((r: string) => `• ${r}`).join('\n') + '\n'
+                : '• Alasan skip tidak tersedia\n';
+
+             caption =
+                `🛑 *SIGNAL SKIPPED* 🛑\n` +
+                `----------------------------------\n` +
+                `📌 *Pair:* ${signal.symbol}\n` +
+                `⏱️ *TF:* ${signal.timeframe}\n` +
+                `📊 *Strategy:* ${filterStrategy}\n` +
+                `🔎 *Alasan Skip:*\n${reasonLines}` +
+                `----------------------------------\n` +
+                (h1TriggerLine ? h1TriggerLine : `\n`) +
+                (m15TriggerLine ? m15TriggerLine : '') +
+                (m5TriggerLine ? m5TriggerLine : '') +
+                (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
+                `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} ${orderType})\n` +
+                `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
+                `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n` +
+                `⚖️ *Lot:* ${lotSize}\n\n` +
+                `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                `----------------------------------\n` +
+                (ticketLine ? `${ticketLine}` : '');
+          } else {
+             caption =
+                `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
+                `----------------------------------\n` +
+                `📌 *Pair:* ${signal.symbol}\n` +
+                `⏱️ *TF:* ${signal.timeframe}\n` +
+                `📊 *Strategy:* ${filterStrategy}\n` +
+                (h1TriggerLine ? h1TriggerLine : `\n`) +
+                (m15TriggerLine ? m15TriggerLine : '') +
+                (m5TriggerLine ? m5TriggerLine : '') +
+                (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
+                `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} ${orderType})\n` +
+                `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
+                `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n` +
+                `⚖️ *Lot:* ${lotSize}\n\n` +
+                `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
+                `----------------------------------\n` +
+                (ticketLine ? `${ticketLine}` : '') +
+                `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+          }
 
         } catch (e) {
           console.log('Notes is not JSON or failed to parse, falling back to basic format.');

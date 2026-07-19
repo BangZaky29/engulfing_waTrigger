@@ -32,29 +32,58 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
     const activeFilter = process.env.ACTIVE_FILTER_STRATEGY ? `Filter ${process.env.ACTIVE_FILTER_STRATEGY.split('#')[0].trim()}` : 'Filter B';
     const minGradeInfo = (process.env.MIN_GRADE_ALLOWED || 'C+').split('#')[0].trim();
 
+    // === EMA & Execution Variables ===
+    const emaFast = process.env.EMA_FAST || '10';
+    const emaSlow = process.env.EMA_SLOW || '20';
+    const tfmEmaFilter = process.env.TFM_USE_EMA_FILTER?.toLowerCase() === 'true' ? 'ON' : 'OFF';
+    const lookbackBars = process.env.TFM_TRIGGER_LOOKBACK_BARS || '200';
+    const tfmBlocking = process.env.TFM_BLOCKING?.toLowerCase() === 'true' ? 'ON (WAIT/LATE = skip)' : 'OFF';
+
+    const opMode = process.env.EXECUTION_USE_LIMIT?.toLowerCase() === 'true' ? 'PENDING ORDER (Limit)' : 'MARKET (Langsung Execute)';
+    const slMode = process.env.EXECUTION_SL_PCT_B ? `Dinamis — ${process.env.EXECUTION_SL_PCT_B}% ekor candle H1 trigger` : 'Statis';
+    const tpMode = process.env.EXECUTION_TP_MODE_B === 'USD' ? `Statis USD — target $${process.env.EXECUTION_TP_TARGET_USD_B} per trade` : 'Dinamis PCT';
+
+    const lotBTC = process.env.LOT_Bitcoin || '1.0';
+    const lotNASDAQ = process.env.LOT_NASDAQ_100 || '0.1';
+    const lotXAUUSD = process.env.LOT_XAUUSD || '0.1';
+
     // === Trading Schedule Info ===
     const tradingEnabled = process.env.TRADING_ACTIVE_ENABLED?.toLowerCase() === 'true';
     const tradingStart = process.env.TRADING_ACTIVE_START || '15:00';
     const tradingEnd = process.env.TRADING_ACTIVE_END || '04:00';
 
     const tradingScheduleBlock = tradingEnabled
-      ? `🟢 *Execute:* AKTIF (${tradingStart} → ${tradingEnd} WIB)\n` +
+      ? `🟢 *AKTIF* (${tradingStart} → ${tradingEnd} WIB)\n` +
         `🔸 Di luar jam: scan only, tanpa execute`
-      : `🟡 *Execute:* SELALU AKTIF (schedule belum diset)`;
+      : `🟡 *ALWAYS ACTIVE* (schedule disabled)`;
+
+    // === Dynamic Symbols Status ===
+    const activeSymbolsText = pairsArray.map(sym => `✅ Symbol ${sym} aktif.`).join('\n');
 
     const startupMsg =
       `🟢 *SISTEM AKTIF* 🟢\n\n` +
-      `🤖 *Engulfing Analytics Bot* telah berhasil dinyalakan dan siap beroperasi.\n\n` +
+      `🤖 *ENGULFING PATTERN SCANNER (MODULAR)*\n` +
+      `Telah berhasil dinyalakan dan siap beroperasi.\n\n` +
       `━━━━━━━━━━━━━━━━━\n` +
       `📅 Tanggal : ${tgl}\n` +
       `🕐 Waktu   : ${jam} WIB\n` +
       `━━━━━━━━━━━━━━━━━\n\n` +
       `⚙️ *KONFIGURASI SCANNER:*\n` +
-      `🔸 *Pairs:* ${pairs}\n` +
+      `🔸 *Symbols:* ${pairs}\n` +
       `🔸 *Execute TF:* ${tfInfo}\n` +
       `🔸 *Info TFs:* ${infoTfs}\n` +
+      `🔸 *EMA:* EMA_${emaFast} / EMA_${emaSlow}\n` +
+      `🔸 *Database:* Supabase\n` +
       `🔸 *Strategy:* ${activeFilter}\n` +
       `🔸 *Min Grade:* ${minGradeInfo}\n\n` +
+      `📡 *[TF Monitor]* Filter C AKTIF — H1 Bias + M15 Confirm + M5 Trigger\n` +
+      `   EMA Filter: ${tfmEmaFilter} | Lookback: ${lookbackBars} bars\n` +
+      `   Blocking: ${tfmBlocking}\n\n` +
+      `⚙️  *[Execution Config]*\n` +
+      `   OP Mode : ${opMode}\n` +
+      `   SL Mode : ${slMode}\n` +
+      `   TP Mode : ${tpMode}\n` +
+      `   Lot     : XAUUSD=${lotXAUUSD}, NASDAQ-100=${lotNASDAQ}, BTC=${lotBTC}\n\n` +
       `━━━━━━━━━━━━━━━━━\n` +
       `⏰ *JAM TRADING:*\n` +
       `${tradingScheduleBlock}\n\n` +
@@ -65,9 +94,10 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
       `🔸 Bulanan  : Akhir bulan 23:57 WIB\n` +
       `🔸 Tahunan  : 31 Des 23:56 WIB\n\n` +
       `━━━━━━━━━━━━━━━━━\n` +
-      `✅ Multi-Currency Scanner aktif\n` +
-      `✅ Listener sinyal Realtime aktif\n` +
-      `✅ Laporan otomatis terjadwal\n\n` +
+      `✅ MT5 terhubung.\n` +
+      `${activeSymbolsText}\n` +
+      `✅ Listener sinyal Realtime aktif.\n` +
+      `✅ Laporan otomatis terjadwal.\n\n` +
       `_Bot akan mengirim notifikasi OP jika market memenuhi kriteria di atas._ 🚀`;
 
     console.log(`[STARTUP] Mencoba kirim pesan ke ${GROUP_JID}, ${PRIVATE_JID}, dan ${SKIP_SIGNAL} (attempt ${retryCount + 1}/${MAX_RETRY})...`);

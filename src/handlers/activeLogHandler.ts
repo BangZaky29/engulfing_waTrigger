@@ -26,6 +26,14 @@ export async function handleActiveLog(payload: any) {
                  `👉 *Harap pantau dan lakukan eksekusi (Close/Exit) secara MANUAL (Manusia) untuk kedua posisi ini!*`;
     }
 
+    const cleanSym = log.symbol ? log.symbol.replace(/ /g, '_').replace(/-/g, '_') : '';
+    let lotSize = process.env[`LOT_${cleanSym}`] || process.env[`LOT_${log.symbol}`];
+    if (!lotSize && log.symbol) {
+        if (log.symbol === 'BTC' || log.symbol === 'BTCUSD') lotSize = process.env.LOT_Bitcoin;
+        else if (log.symbol === 'NASDAQ-100' || log.symbol === 'US100' || log.symbol === 'USTEC') lotSize = process.env.LOT_US_Tech_100_index || process.env.LOT_NASDAQ_100;
+    }
+    lotSize = lotSize || process.env.EXECUTION_LOT_SIZE || '0.01';
+
     const caption = 
       `${title}\n` +
       `━━━━━━━━━━━━━━━━━\n` +
@@ -33,7 +41,8 @@ export async function handleActiveLog(payload: any) {
       `📌 *Pair:* ${log.symbol}\n` +
       `🎯 *Entry:* ${log.op_price ? log.op_price.toFixed(5) : '-'}\n` +
       `🛑 *SL:* ${log.sl_price ? log.sl_price.toFixed(5) : '-'}\n` +
-      `🏆 *TP:* ${log.tp_price ? log.tp_price.toFixed(5) : '-'}` +
+      `🏆 *TP:* ${log.tp_price ? log.tp_price.toFixed(5) : '-'}\n` +
+      `⚖️ *Lot:* ${lotSize}` +
       `${sessionStr}\n` +
       `━━━━━━━━━━━━━━━━━\n` +
       `🎫 *Ticket:* ${log.ticket_id}`;

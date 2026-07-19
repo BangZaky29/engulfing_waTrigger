@@ -55,13 +55,27 @@ export async function handleTradeResult(payload: any) {
           
           const isBuy = trade.mode?.toUpperCase() === 'BUY';
           const slSourceRaw = notesObj.sl_source || 'M5';
-          const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : 30;
+          const defaultSlPct = process.env.EXECUTION_SL_PCT_B || '50';
+          const slPctVal = notesObj.sl_pct ? Math.round(notesObj.sl_pct * 100) : Number(defaultSlPct);
           const slSource = slSourceRaw === 'H1' ? `_(Dynamic H1 ${slPctVal}%)_` : `_(M5 Default)_`;
 
-          extraInfo += `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} MARKET)\n`;
+          const isLimit = process.env.EXECUTION_USE_LIMIT?.toLowerCase() === 'true';
+          const orderType = isLimit ? 'LIMIT' : 'MARKET';
+
+          const cleanSym = trade.symbol ? trade.symbol.replace(/ /g, '_').replace(/-/g, '_') : '';
+          let lotSize = process.env[`LOT_${cleanSym}`] || process.env[`LOT_${trade.symbol}`];
+          if (!lotSize && trade.symbol) {
+              if (trade.symbol === 'BTC' || trade.symbol === 'BTCUSD') lotSize = process.env.LOT_Bitcoin;
+              else if (trade.symbol === 'NASDAQ-100' || trade.symbol === 'US100' || trade.symbol === 'USTEC') lotSize = process.env.LOT_US_Tech_100_index || process.env.LOT_NASDAQ_100;
+          }
+          lotSize = lotSize || process.env.EXECUTION_LOT_SIZE || '0.01';
+
+          extraInfo += `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} ${orderType})\n`;
           extraInfo += `🛑 *SL:* ${slPriceStr} ${slSource}\n`;
-          const targetUsd = notesObj.target_usd ? notesObj.target_usd : 8.0;
-          extraInfo += `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n\n`;
+          const defaultTpUsd = process.env.EXECUTION_TP_TARGET_USD_B || '70.0';
+          const targetUsd = notesObj.target_usd ? notesObj.target_usd : Number(defaultTpUsd);
+          extraInfo += `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n`;
+          extraInfo += `⚖️ *Lot:* ${lotSize}\n\n`;
         }
       } catch (e) {
         console.error('Error fetching/parsing notes for trade result:', e);
