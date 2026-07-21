@@ -104,7 +104,7 @@ export async function setupSupabaseListeners() {
   // Listen to engulfing_signals
   supabase
     .channel('engulfing_signals_changes')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'engulfing_signals', filter: 'is_confirmed=eq.true' }, handleEngulfingSignal)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'engulfing_signals' }, handleEngulfingSignal)
     .subscribe((status: string) => {
       console.log(`[LISTENER] engulfing_signals_changes subscription status: ${status}`);
       if (status === 'CHANNEL_ERROR') {
