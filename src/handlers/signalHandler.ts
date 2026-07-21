@@ -70,10 +70,13 @@ export async function handleEngulfingSignal(payload: any) {
           `----------------------------------\n` +
           `ℹ️ _Hanya informasi, tidak ada eksekusi otomatis._`;
     } else if (notesObj.ticket_id === 'INFO_ACTIVE') {
-      const skipReasons: string[] = Array.isArray(notesObj.skip_reasons)
-        ? notesObj.skip_reasons
-        : notesObj.skip_reason
+      const skipReasons: string[] =
+        Array.isArray(notesObj.skip_reasons) && notesObj.skip_reasons.length > 0
+          ? notesObj.skip_reasons
+          : notesObj.skip_reason
           ? [notesObj.skip_reason]
+          : signal.skip_reason
+          ? [signal.skip_reason]
           : [];
       const reasonLines = skipReasons.length > 0
         ? skipReasons.map((r) => `• ${r}`).join('\n') + '\n'
@@ -183,11 +186,14 @@ export async function handleEngulfingSignal(payload: any) {
           lotSize = lotSize || process.env.EXECUTION_LOT_SIZE || '0.01';
 
           if (isSkippedSignal) {
-             const skipReasons: string[] = Array.isArray(notesObj.skip_reasons)
-                ? notesObj.skip_reasons
-                : signal.skip_reason
-                  ? [signal.skip_reason]
-                  : [];
+             const skipReasons: string[] =
+                Array.isArray(notesObj.skip_reasons) && notesObj.skip_reasons.length > 0
+                   ? notesObj.skip_reasons
+                   : notesObj.skip_reason
+                   ? [notesObj.skip_reason]
+                   : signal.skip_reason
+                   ? [signal.skip_reason]
+                   : [];
              const reasonLines = skipReasons.length > 0
                 ? skipReasons.map((r: string) => `• ${r}`).join('\n') + '\n'
                 : '• Alasan skip tidak tersedia\n';
