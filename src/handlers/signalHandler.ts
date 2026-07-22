@@ -166,12 +166,13 @@ export async function handleEngulfingSignal(payload: any) {
           const defaultTpUsd = process.env.EXECUTION_TP_TARGET_USD_B || '70.0';
           const targetUsd = notesObj.target_usd ? notesObj.target_usd : Number(defaultTpUsd);
 
-          const emaDistPts = notesObj.ema_distance_pts ?? notesObj.h1_ema_distance_pts;
-          const emaDistStatus = notesObj.ema_distance_status ?? notesObj.h1_ema_distance_status;
+          const h1EmaDistPts = notesObj.h1_ema_distance_pts;
+          const h1EmaDistStatus = notesObj.h1_ema_distance_status;
           let emaDistanceLine = '';
-          if (emaDistStatus && emaDistPts != null) {
-            const statusEmoji = emaDistStatus === 'STRONG' ? '🟢🔥' : (emaDistStatus === 'VALID' ? '🟡' : '🔴');
-            emaDistanceLine = `📏 *EMA Distance H1 C1:* ${statusEmoji} ${emaDistStatus} (${emaDistPts} pts)\n`;
+          if (h1EmaDistStatus && h1EmaDistPts != null) {
+            const h1Time = notesObj.h1_trigger_time ? ` (${notesObj.h1_trigger_time})` : '';
+            const statusEmoji = h1EmaDistStatus === 'STRONG' ? '🟢🔥' : (h1EmaDistStatus === 'VALID' ? '🟡' : '🔴');
+            emaDistanceLine = `📏 *EMA Distance H1 C1${h1Time}:* ${statusEmoji} ${h1EmaDistStatus} (${h1EmaDistPts} pts)\n`;
           }
 
           const isLimit = process.env.EXECUTION_USE_LIMIT?.toLowerCase() === 'true';
