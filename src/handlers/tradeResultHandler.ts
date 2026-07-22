@@ -47,6 +47,13 @@ export async function handleTradeResult(payload: any) {
             extraInfo += `🔥 *M5 Trigger:* ${notesObj.m5_trigger_source.replace(/^Multi:/, '').replace(/\+/g, ' / ')}${m5Time}\n`;
           }
 
+          const emaDistPts = notesObj.ema_distance_pts ?? notesObj.h1_ema_distance_pts;
+          const emaDistStatus = notesObj.ema_distance_status ?? notesObj.h1_ema_distance_status;
+          if (emaDistStatus && emaDistPts != null) {
+            const statusEmoji = emaDistStatus === 'STRONG' ? '🟢🔥' : (emaDistStatus === 'VALID' ? '🟡' : '🔴');
+            extraInfo += `📏 *EMA Distance H1 C1:* ${statusEmoji} ${emaDistStatus} (${emaDistPts} pts)\n`;
+          }
+
           extraInfo += '\n';
 
           const opPriceStr = trade.op_price != null ? trade.op_price : (notesObj.op_price || '-');
