@@ -77,6 +77,7 @@ export async function handleTradeResult(payload: any) {
           }
           lotSize = lotSize || process.env.EXECUTION_LOT_SIZE || '0.01';
 
+
           extraInfo += `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} ${orderType})\n`;
           extraInfo += `🛑 *SL:* ${slPriceStr} ${slSource}\n`;
           const defaultTpUsd = process.env.EXECUTION_TP_TARGET_USD_B || '70.0';
