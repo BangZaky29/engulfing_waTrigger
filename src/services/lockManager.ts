@@ -14,7 +14,21 @@ export async function acquireLock(supabase: SupabaseClient, sessionId: string, i
     }
 
     if (!session) {
-      console.error('[LOCK] Session not found in database.');
+      console.log('[LOCK] Session not found. Creating a new session row...');
+      const { error: insertError } = await supabase
+        .from('whatsapp_sessions')
+        .insert([{ 
+           id: sessionId, 
+           owner_id: instanceId, 
+           locked_at: new Date().toISOString(),
+           updated_at: new Date().toISOString()
+        }]);
+        
+      if (!insertError) {
+        console.log('[LOCK] Lock acquired successfully (new session created).');
+        return true;
+      }
+      console.error('[LOCK] Failed to create new session:', insertError.message);
       return false;
     }
 

@@ -205,19 +205,7 @@ export async function handleEngulfingSignal(payload: any) {
                 `⏱️ *TF:* ${signal.timeframe}\n` +
                 `📊 *Strategy:* ${filterStrategy}\n` +
                 (emaDistanceLine ? `${emaDistanceLine}` : '') +
-                `🔎 *Alasan Skip:*\n${reasonLines}` +
-                `----------------------------------\n` +
-                (h1TriggerLine ? h1TriggerLine : `\n`) +
-                (m15TriggerLine ? m15TriggerLine : '') +
-                (m5TriggerLine ? m5TriggerLine : '') +
-                (tfmStatusLine ? `${tfmStatusLine}\n` : '') +
-                `📈 *Entry:* ${opPriceStr} (${isBuy ? 'BUY' : 'SELL'} ${orderType})\n` +
-                `🛑 *SL:* ${slPriceNotes} ${slSource}\n` +
-                `🎯 *TP:* ${tpPriceStr} (Target $${targetUsd})\n` +
-                `⚖️ *Lot:* ${lotSize}\n\n` +
-                `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
-                `----------------------------------\n` +
-                (ticketLine ? `${ticketLine}` : '');
+                `🔎 *Alasan Skip:*\n${reasonLines.trim()}`;
           } else {
              caption =
                 `🌟 *SIGNAL ENGULFING [${mode}]* 🌟\n` +
