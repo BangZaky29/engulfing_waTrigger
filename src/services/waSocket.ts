@@ -124,7 +124,7 @@ export async function connectToWhatsApp() {
     version,
     auth: globalAuthState.state,
     logger,
-    browser: Browsers.macOS('Desktop')
+    browser: Browsers.ubuntu('Chrome')
   });
 
   sock.ev.on('creds.update', globalAuthState.saveCreds);
