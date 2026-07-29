@@ -236,7 +236,7 @@ export class SupabaseAuthState {
         for (const row of rows) {
           let value = JSON.parse(JSON.stringify(row.value), BufferJSON.reviver);
           if (type === 'app-state-sync-key' && value) {
-            value = proto.Message.AppStateSyncKeyData.fromObject(value);
+            value = proto.Message.AppStateSyncKeyData.create(value);
           }
           data[row.key_id] = value;
         }

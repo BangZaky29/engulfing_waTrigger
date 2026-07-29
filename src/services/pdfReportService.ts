@@ -7,9 +7,14 @@
 import puppeteer from 'puppeteer';
 import ejs from 'ejs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { format, subHours } from 'date-fns';
 import { supabase } from './supabaseClient';
 import { geminiService, GeminiInsight, TradeStats } from './geminiService';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // =====================================================
 // Type Definitions
@@ -270,12 +275,12 @@ export class PdfReportService {
    */
   private getReportTitle(reportType: string, dateStart: Date): string {
     switch (reportType) {
-      case 'DAILY':    return `Laporan Harian — ${format(dateStart, 'dd MMM yyyy')}`;
-      case 'WEEKLY':   return 'Laporan Mingguan';
-      case 'MONTHLY':  return `Laporan Bulanan — ${format(dateStart, 'MMMM yyyy')}`;
-      case 'YEARLY':   return `Laporan Tahunan — ${format(dateStart, 'yyyy')}`;
+      case 'DAILY': return `Laporan Harian — ${format(dateStart, 'dd MMM yyyy')}`;
+      case 'WEEKLY': return 'Laporan Mingguan';
+      case 'MONTHLY': return `Laporan Bulanan — ${format(dateStart, 'MMMM yyyy')}`;
+      case 'YEARLY': return `Laporan Tahunan — ${format(dateStart, 'yyyy')}`;
       case 'SHUTDOWN': return 'Laporan Sesi Manual';
-      default:         return `Laporan ${reportType}`;
+      default: return `Laporan ${reportType}`;
     }
   }
 

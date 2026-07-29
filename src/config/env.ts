@@ -1,6 +1,11 @@
 import dotenv from 'dotenv';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Karena file ini sekarang berada di src/config/, naik 2 tingkat untuk ke root wa_trigger
 dotenv.config({ path: resolve(__dirname, '../../.env') }); // load local .env

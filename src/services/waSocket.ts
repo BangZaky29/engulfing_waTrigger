@@ -1,9 +1,10 @@
-import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import { makeWASocket, DisconnectReason, Browsers } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import { supabase } from './supabaseClient';
 import { useSupabaseAuthState } from './supabaseAuthState';
 import { acquireLock, startLockHeartbeat } from './lockManager';
+import { resolveWaVersion, invalidateVersionCache } from './versionResolver';
 import { delay } from '../utils/helpers';
 import { SESSION_ID, GROUP_JID } from '../config/env';
 // Import removed to prevent circular dependency
@@ -32,6 +33,10 @@ let globalAuthState: any = null;
 let reconnectDelay = 5000;
 const MAX_RECONNECT_DELAY = 60000;
 let cronStarted = false;
+
+// Track consecutive 405 errors to prevent infinite loop
+let consecutive405Count = 0;
+const MAX_405_RETRIES = 5;
 
 export function isWaReady() {
   return Boolean(sock && sock.user && waConnectionState === 'open');
@@ -111,13 +116,15 @@ export async function connectToWhatsApp() {
 
   clearAuthState = globalAuthState.clearState;
 
-  const { version } = await fetchLatestBaileysVersion();
-  console.log(`[CONFIG] Baileys version = ${version.join('.')}`);
+  // Resolve version dynamically from multiple sources
+  const version = await resolveWaVersion();
+  console.log(`[CONFIG] Using WhatsApp Web version: ${version.join('.')}`);
 
   sock = makeWASocket({
     version,
     auth: globalAuthState.state,
     logger,
+    browser: Browsers.macOS('Desktop')
   });
 
   sock.ev.on('creds.update', globalAuthState.saveCreds);
@@ -126,7 +133,7 @@ export async function connectToWhatsApp() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('[WA] QR Code received, updating Supabase...');
+      console.log('[WA] QR Code received, syncing to Supabase for FE display...');
       await syncWaStatus('UNPAIRED', qr);
     }
 
@@ -136,11 +143,37 @@ export async function connectToWhatsApp() {
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       if (shouldReconnect) {
-        console.log(`[WA] Reconnect dalam ${reconnectDelay / 1000} detik...`);
-        setTimeout(connectToWhatsApp, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+        const errorData = (lastDisconnect?.error as any)?.data;
+        const is405or428 = statusCode === 405 || statusCode === 428 || errorData?.reason === '405' || errorData?.reason === '428';
+
+        if (is405or428) {
+          consecutive405Count++;
+          console.error(`[WA] ❌ Error ${statusCode || errorData?.reason} — version ditolak oleh WhatsApp. (${consecutive405Count}/${MAX_405_RETRIES})`);
+
+          if (consecutive405Count >= MAX_405_RETRIES) {
+            console.error('[WA] 🛑 Sudah gagal 405 sebanyak ' + MAX_405_RETRIES + 'x berturut-turut.');
+            console.error('[WA] 🛑 Kemungkinan besar library Baileys perlu diupgrade ke v7.');
+            console.error('[WA] 🛑 Bot berhenti untuk mencegah loop tanpa henti.');
+            await syncWaStatus('ERROR_405', null);
+            return; // Stop reconnecting
+          }
+
+          // Invalidate version cache & fetch fresh version on next connect
+          invalidateVersionCache();
+          const retryDelay = 10000; // Fixed 10s delay for 405 retries
+          console.log(`[WA] Fetching fresh WA version dan reconnect dalam ${retryDelay / 1000} detik...`);
+          setTimeout(connectToWhatsApp, retryDelay);
+        } else {
+          // Non-405 errors: normal exponential backoff
+          consecutive405Count = 0; // Reset counter on non-405 error
+          console.error('[WA] Connection closed. Status:', statusCode, 'Reason:', lastDisconnect?.error?.message || lastDisconnect?.error);
+          console.log(`[WA] Reconnect dalam ${reconnectDelay / 1000} detik...`);
+          setTimeout(connectToWhatsApp, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+        }
       } else {
         console.log('[WA] Logged out. Clearing state dan reconnect untuk QR baru...');
+        consecutive405Count = 0;
         if (clearAuthState) await clearAuthState();
         clearAuthState = null;
         globalAuthState = null;
@@ -152,6 +185,7 @@ export async function connectToWhatsApp() {
       console.log('[WA] ✅ Connection OPEN!');
       waConnectionState = 'open';
       reconnectDelay = 5000;
+      consecutive405Count = 0; // Reset on successful connection
       await syncWaStatus('CONNECTED', null);
       await delay(3000);
 
