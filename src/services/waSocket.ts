@@ -136,10 +136,19 @@ export async function connectToWhatsApp() {
 
     // Hanya merespon di dalam GROUP_SAR
     if (GROUP_SAR && msg.key.remoteJid === GROUP_SAR) {
-      // Pastikan pengirim adalah EXECUTOR
       const sender = msg.key.participant || msg.key.remoteJid;
-      if (EXECUTOR && sender.includes(EXECUTOR.replace('@s.whatsapp.net', ''))) {
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+      const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+      const pushName = msg.pushName || '';
+      
+      console.log(`[WA_COMMAND] Group: ${msg.key.remoteJid} | Sender: ${sender} | PushName: ${pushName} | Text: ${text}`);
+
+      // Bypass LID issue by checking either sender JID or pushName, or hardcoded LID
+      const isExecutor = (EXECUTOR && sender.includes(EXECUTOR.replace('@s.whatsapp.net', ''))) 
+        || pushName.toLowerCase() === 'bangzaky29' 
+        || pushName.toLowerCase().includes('zaky')
+        || sender.includes('9264932344023'); // Fallback LID BangZaky
+
+      if (isExecutor) {
         const command = text.trim().toLowerCase();
         
         if (command === 'aktifkan' || command === 'aktifkan sistem kembali') {
@@ -148,6 +157,17 @@ export async function connectToWhatsApp() {
         } else if (command === 'matikan bot') {
           await supabase.from('itr_command_state').upsert({ id: 'main_itr', status: 'PAUSED' }, { onConflict: 'id' });
           await sock.sendMessage(GROUP_SAR, { text: '🛑 Mesin ITR telah dimatikan. Bot standby menunggu perintah.' });
+        } else if (command === 'info ai') {
+          const helpText = `🤖 *DAFTAR PERINTAH ITR BOT* 🤖\n\n` +
+            `▶️ *Aktifkan* - Memulai eksekusi market\n` +
+            `⏸️ *Matikan Bot* - Menghentikan eksekusi market (standby)\n` +
+            `💰 *Info Profit* - Mengecek laporan profit & loss sesi berjalan\n` +
+            `ℹ️ *Info AI* - Menampilkan pesan panduan ini`;
+          await sock.sendMessage(GROUP_SAR, { text: helpText });
+        } else if (command === 'info profit') {
+          // Memberi tahu Python engine untuk menghitung dan mengirim profit info
+          await supabase.from('itr_command_state').update({ updated_by: 'REQUEST_PROFIT_INFO' }).eq('id', 'main_itr');
+          await sock.sendMessage(GROUP_SAR, { text: '⏳ Sedang mengkalkulasi PnL sesi dari MT5, mohon tunggu sebentar...' });
         }
       }
     }
