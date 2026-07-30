@@ -41,11 +41,26 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
 
     const opMode = process.env.EXECUTION_USE_LIMIT?.toLowerCase() === 'true' ? 'PENDING ORDER (Limit)' : 'MARKET (Langsung Execute)';
     const slMode = process.env.EXECUTION_SL_PCT_B ? `Dinamis — ${process.env.EXECUTION_SL_PCT_B}% ekor candle H1 trigger` : 'Statis';
-    const tpMode = process.env.EXECUTION_TP_MODE_B === 'USD' ? `Statis USD — target $${process.env.EXECUTION_TP_TARGET_USD_B} per trade` : 'Dinamis PCT';
+    const tpMode = process.env.EXECUTION_TP_MODE_B === 'USD' ? `Statis USD — Target dinamis per mata uang (default $${process.env.EXECUTION_TP_TARGET_USD_B || '700.0'})` : `Dinamis PCT — ${process.env.EXECUTION_TP_PCT}% jarak OP→SL`;
 
-    const lotBTC = process.env.LOT_Bitcoin || '1.0';
-    const lotNASDAQ = process.env.LOT_NASDAQ_100 || '0.1';
-    const lotXAUUSD = process.env.LOT_XAUUSD || '0.1';
+    const lotList = pairsArray.map(sym => {
+        let cleanSym = sym.replace(/-/g, '_').replace(/ /g, '_');
+        let override = process.env[`LOT_${cleanSym}`] || process.env[`LOT_${sym}`];
+        if (!override && (sym === 'BTC' || sym === 'BTCUSD')) override = process.env.LOT_Bitcoin || process.env.LOT_BTC;
+        if (!override && (sym === 'NASDAQ-100' || sym === 'US100')) override = process.env.LOT_NASDAQ_100;
+        return `${sym}=${override ? override.split('#')[0].trim() : '0.01'}`;
+    });
+    const lotInfo = lotList.join(', ');
+
+    const defaultTpUsd = (process.env.EXECUTION_TP_TARGET_USD_B || '700.0').split('#')[0].trim();
+    const tpUsdList = pairsArray.map(sym => {
+        let cleanSym = sym.replace(/-/g, '_').replace(/ /g, '_');
+        let override = process.env[`TP_USD_${cleanSym}`] || process.env[`TP_USD_${sym}`];
+        if (!override && (sym === 'BTC' || sym === 'BTCUSD')) override = process.env.TP_USD_Bitcoin || process.env.TP_USD_BTC;
+        if (!override && (sym === 'NASDAQ-100' || sym === 'US100')) override = process.env.TP_USD_NASDAQ_100;
+        return `${sym}=$${override ? override.split('#')[0].trim() : defaultTpUsd}`;
+    });
+    const tpUsdInfo = tpUsdList.join(', ');
 
     // === Trading Schedule Info ===
     const tradingEnabled = process.env.TRADING_ACTIVE_ENABLED?.toLowerCase() === 'true';
@@ -83,7 +98,8 @@ export async function sendStartupMessage(retryCount = 0): Promise<void> {
       `   OP Mode : ${opMode}\n` +
       `   SL Mode : ${slMode}\n` +
       `   TP Mode : ${tpMode}\n` +
-      `   Lot     : XAUUSD=${lotXAUUSD}, NASDAQ-100=${lotNASDAQ}, BTC=${lotBTC}\n\n` +
+      (process.env.EXECUTION_TP_MODE_B === 'USD' ? `   TP USD  : ${tpUsdInfo}\n` : '') +
+      `   Lot     : ${lotInfo}\n\n` +
       `━━━━━━━━━━━━━━━━━\n` +
       `⏰ *JAM TRADING:*\n` +
       `${tradingScheduleBlock}\n\n` +
