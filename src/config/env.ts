@@ -26,4 +26,6 @@ export const PRIVATE_JID = process.env.PRIVATE_JID || GROUP_JID;
 export const SKIP_SIGNAL = process.env.SKIP_SIGNAL || GROUP_JID;
 export const PROFIT_SIGNAL = process.env.PROFIT_SIGNAL || GROUP_JID;
 export const LOSS_SIGNAL = process.env.LOSS_SIGNAL || GROUP_JID;
+export const GROUP_SAR = process.env.GROUP_SAR;
+export const EXECUTOR = process.env.EXECUTOR;
 export const SESSION_ID = 'main_session';

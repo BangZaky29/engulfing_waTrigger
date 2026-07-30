@@ -6,7 +6,7 @@ import { useSupabaseAuthState } from './supabaseAuthState';
 import { acquireLock, startLockHeartbeat } from './lockManager';
 import { resolveWaVersion, invalidateVersionCache } from './versionResolver';
 import { delay } from '../utils/helpers';
-import { SESSION_ID, GROUP_JID } from '../config/env';
+import { SESSION_ID, GROUP_JID, GROUP_SAR, EXECUTOR } from '../config/env';
 // Import removed to prevent circular dependency
 import { startAllCronJobs } from '../cron/cronManager';
 import { processOutbox } from './outboxService';
@@ -128,6 +128,30 @@ export async function connectToWhatsApp() {
   });
 
   sock.ev.on('creds.update', globalAuthState.saveCreds);
+
+  sock.ev.on('messages.upsert', async (m: any) => {
+    if (m.type !== 'notify') return;
+    const msg = m.messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+
+    // Hanya merespon di dalam GROUP_SAR
+    if (GROUP_SAR && msg.key.remoteJid === GROUP_SAR) {
+      // Pastikan pengirim adalah EXECUTOR
+      const sender = msg.key.participant || msg.key.remoteJid;
+      if (EXECUTOR && sender.includes(EXECUTOR.replace('@s.whatsapp.net', ''))) {
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+        const command = text.trim().toLowerCase();
+        
+        if (command === 'aktifkan' || command === 'aktifkan sistem kembali') {
+          await supabase.from('itr_command_state').upsert({ id: 'main_itr', status: 'ACTIVE' }, { onConflict: 'id' });
+          await sock.sendMessage(GROUP_SAR, { text: '✅ Siap laksanakan Bos! Mesin ITR telah diaktifkan dan mulai mengeksekusi market.' });
+        } else if (command === 'matikan bot') {
+          await supabase.from('itr_command_state').upsert({ id: 'main_itr', status: 'PAUSED' }, { onConflict: 'id' });
+          await sock.sendMessage(GROUP_SAR, { text: '🛑 Mesin ITR telah dimatikan. Bot standby menunggu perintah.' });
+        }
+      }
+    }
+  });
 
   sock.ev.on('connection.update', async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
