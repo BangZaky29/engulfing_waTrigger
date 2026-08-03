@@ -34,9 +34,9 @@ process.on('SIGINT', async () => {
   console.log(`[SYSTEM] Sesi berjalan dari ${SESSION_START_TIME.toLocaleTimeString('id-ID')} → ${shutdownTime.toLocaleTimeString('id-ID')}`);
   console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
 
-  if (sock) {
-    await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
-  }
+  // if (sock) {
+  //   await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
+  // }
 
   if (sock && PRIVATE_JID) {
     try {

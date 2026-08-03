@@ -253,7 +253,7 @@ export async function connectToWhatsApp() {
 
       if (isFirstConnect && GROUP_JID) {
         isFirstConnect = false;
-        await sendStartupMessage();
+        // await sendStartupMessage(); // Disabled: System status is now sent by main.py & rcs_main.py
       }
     }
   });
