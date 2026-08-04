@@ -9,7 +9,7 @@ import { setupSupabaseListeners } from './handlers/realtimeListeners';
 import { delay } from './utils/helpers';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
-const SESSION_START_TIME = new Date();
+export const SESSION_START_TIME = new Date();
 
 // =====================================================
 // Bootstrap — connectToWhatsApp & Outbox Polling Worker
@@ -27,26 +27,12 @@ process.on('SIGINT', async () => {
   const shutdownTime = new Date();
 
   console.log('\n[SYSTEM] Menerima sinyal Shutdown (Ctrl+C)...');
-  console.log('⚠️ ========================================================================= ⚠️');
-  console.log('⚠️ HARAP TUNGGU! Sedang membuat PDF dan mengirim notifikasi WhatsApp.');
-  console.log('⚠️ JANGAN tekan "Y" pada prompt "Terminate batch job" sampai proses selesai!');
-  console.log('⚠️ ========================================================================= ⚠️\n');
   console.log(`[SYSTEM] Sesi berjalan dari ${SESSION_START_TIME.toLocaleTimeString('id-ID')} → ${shutdownTime.toLocaleTimeString('id-ID')}`);
-  console.log('[SYSTEM] Membuat Laporan PDF Terakhir sebelum mati...');
+  console.log('[SYSTEM] Menutup koneksi dengan bersih...');
 
   // if (sock) {
   //   await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
   // }
-
-  if (sock && PRIVATE_JID) {
-    try {
-      const pdfTask = generateAndSendPDF(sock, 'SHUTDOWN', PRIVATE_JID, SESSION_START_TIME, shutdownTime);
-      const timeoutTask = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 45 detik pembuatan PDF')), 45000));
-      await Promise.race([pdfTask, timeoutTask]);
-    } catch (e: any) {
-      console.error('[SYSTEM] Gagal mengirim Shutdown Report:', e?.message || e);
-    }
-  }
 
   // Release lock cleanly
   if (heartbeatInterval) {

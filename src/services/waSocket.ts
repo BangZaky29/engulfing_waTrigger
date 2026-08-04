@@ -11,6 +11,8 @@ import { SESSION_ID, GROUP_JID, GROUP_SAR, EXECUTOR } from '../config/env';
 import { startAllCronJobs } from '../cron/cronManager';
 import { processOutbox } from './outboxService';
 import { sendStartupMessage } from '../handlers/systemHandler';
+import { generateAndSendPDF } from './pdfReportService';
+import { SESSION_START_TIME } from '../index';
 
 export let sock: any = null;
 export let waConnectionState = 'close';
@@ -134,19 +136,33 @@ export async function connectToWhatsApp() {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
 
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    const pushName = msg.pushName || '';
+    
+    const isExecutor = (EXECUTOR && sender.includes(EXECUTOR.replace('@s.whatsapp.net', ''))) 
+      || pushName.toLowerCase() === 'bangzaky29' 
+      || pushName.toLowerCase().includes('zaky')
+      || sender.includes('9264932344023'); // Fallback LID BangZaky
+
+    if (isExecutor && text.trim().toLowerCase().includes('report')) {
+      if (!msg.key.remoteJid.includes('@g.us')) {
+        console.log(`[WA_COMMAND] Menerima request REPORT via Private Message dari ${sender}`);
+        await sock.sendMessage(msg.key.remoteJid, { text: '⏳ Sedang menyiapkan report PDF AI, mohon tunggu sebentar...' });
+        try {
+          generateAndSendPDF(sock, 'ON_DEMAND', msg.key.remoteJid, SESSION_START_TIME, new Date()).catch(e => {
+            console.error('[SYSTEM] Error di PDF On-Demand Promise:', e);
+          });
+        } catch (e: any) {
+          console.error('[SYSTEM] Gagal generate PDF on demand:', e);
+        }
+        return; // Stop processing so it doesn't fall into group logic
+      }
+    }
+
     // Hanya merespon di dalam GROUP_SAR
     if (GROUP_SAR && msg.key.remoteJid === GROUP_SAR) {
-      const sender = msg.key.participant || msg.key.remoteJid;
-      const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-      const pushName = msg.pushName || '';
-      
       console.log(`[WA_COMMAND] Group: ${msg.key.remoteJid} | Sender: ${sender} | PushName: ${pushName} | Text: ${text}`);
-
-      // Bypass LID issue by checking either sender JID or pushName, or hardcoded LID
-      const isExecutor = (EXECUTOR && sender.includes(EXECUTOR.replace('@s.whatsapp.net', ''))) 
-        || pushName.toLowerCase() === 'bangzaky29' 
-        || pushName.toLowerCase().includes('zaky')
-        || sender.includes('9264932344023'); // Fallback LID BangZaky
 
       if (isExecutor) {
         const command = text.trim().toLowerCase();
