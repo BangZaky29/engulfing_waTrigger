@@ -168,13 +168,16 @@ export async function connectToWhatsApp() {
         
         const lowerText = text.toLowerCase();
         const needsDeepAnalysis = lowerText.includes('analisa') || lowerText.includes('cek') || lowerText.includes('posisi') || lowerText.includes('nyangkut') || lowerText.includes('recovery');
+        const forceRefresh = lowerText.includes('refresh') || lowerText.includes('update data');
         
-        if (needsDeepAnalysis) {
-            await sock.sendMessage(GROUP_HEDGING_JID, { text: '⏳ *Bro AI sedang menganalisa data market & posisi secara mendalam...*' });
+        if (forceRefresh) {
+            await sock.sendMessage(GROUP_HEDGING_JID, { text: '🔄 *Bro AI sedang memperbarui data dari database...*' });
+        } else if (needsDeepAnalysis) {
+            await sock.sendMessage(GROUP_HEDGING_JID, { text: '⏳ *Bro AI sedang menganalisa...*' });
         }
         
         try {
-          const aiResponse = await handleAiQuery(text, supabase, needsDeepAnalysis);
+          const aiResponse = await handleAiQuery(text, supabase, needsDeepAnalysis, forceRefresh);
           await sock.sendMessage(GROUP_HEDGING_JID, { text: aiResponse });
         } catch (e) {
           console.error('[WA_AI] Error:', e);

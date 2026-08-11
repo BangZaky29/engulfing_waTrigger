@@ -7,6 +7,7 @@ import { releaseLock } from './services/lockManager';
 import { SESSION_ID, PRIVATE_JID } from './config/env';
 import { setupSupabaseListeners } from './handlers/realtimeListeners';
 import { delay } from './utils/helpers';
+import { AiContextCache } from './services/aiContextCache';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
 export const SESSION_START_TIME = new Date();
@@ -14,8 +15,11 @@ export const SESSION_START_TIME = new Date();
 // =====================================================
 // Bootstrap — connectToWhatsApp & Outbox Polling Worker
 // =====================================================
-setOnSocketReady(() => {
+setOnSocketReady(async () => {
   setupSupabaseListeners();
+  // Load AI cache dari Supabase saat WA siap
+  const aiCache = AiContextCache.getInstance();
+  await aiCache.loadFromSupabase(supabase);
 });
 connectToWhatsApp();
 setInterval(() => {
@@ -33,6 +37,10 @@ process.on('SIGINT', async () => {
   // if (sock) {
   //   await sendShutdownMessage('🛑 *SISTEM telah di matikan* 🛑\n\nBot sekarang offline. Mohon tunggu sampai sistem dinyalakan kembali.');
   // }
+
+  // Flush AI cache ke Supabase sebelum exit
+  const aiCache = AiContextCache.getInstance();
+  await aiCache.flushToSupabase(supabase);
 
   // Release lock cleanly
   if (heartbeatInterval) {
