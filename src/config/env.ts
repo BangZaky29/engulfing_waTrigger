@@ -29,3 +29,8 @@ export const LOSS_SIGNAL = process.env.LOSS_SIGNAL || GROUP_JID;
 export const GROUP_SAR = process.env.GROUP_SAR;
 export const EXECUTOR = process.env.EXECUTOR;
 export const SESSION_ID = 'main_session';
+
+// Gemini AI Config
+export const GROUP_HEDGING_JID = "120363428247734021@g.us";
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";

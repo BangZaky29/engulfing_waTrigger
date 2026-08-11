@@ -6,7 +6,8 @@ import { useSupabaseAuthState } from './supabaseAuthState';
 import { acquireLock, startLockHeartbeat } from './lockManager';
 import { resolveWaVersion, invalidateVersionCache } from './versionResolver';
 import { delay } from '../utils/helpers';
-import { SESSION_ID, GROUP_JID, GROUP_SAR, EXECUTOR } from '../config/env';
+import { SESSION_ID, GROUP_JID, GROUP_SAR, EXECUTOR, GROUP_HEDGING_JID } from '../config/env';
+import { handleAiQuery } from './aiService';
 // Import removed to prevent circular dependency
 import { startAllCronJobs } from '../cron/cronManager';
 import { processOutbox } from './outboxService';
@@ -157,6 +158,23 @@ export async function connectToWhatsApp() {
           console.error('[SYSTEM] Gagal generate PDF on demand:', e);
         }
         return; // Stop processing so it doesn't fall into group logic
+      }
+    }
+
+    // Cek Pesan Grup Hedging (Gemini AI)
+    if (GROUP_HEDGING_JID && msg.key.remoteJid === GROUP_HEDGING_JID) {
+      if (text.toLowerCase().includes('ai') || text.toLowerCase().includes('bro ai')) {
+        console.log(`[WA_AI] Menerima pertanyaan dari ${pushName} di Group Hedging: ${text}`);
+        await sock.sendMessage(GROUP_HEDGING_JID, { text: '⏳ *Bro AI sedang menganalisa data market & posisi...*' });
+        
+        try {
+          const aiResponse = await handleAiQuery(text, supabase);
+          await sock.sendMessage(GROUP_HEDGING_JID, { text: aiResponse });
+        } catch (e) {
+          console.error('[WA_AI] Error:', e);
+          await sock.sendMessage(GROUP_HEDGING_JID, { text: '❌ Waduh bro, AI lagi error nih. Coba lagi nanti ya.' });
+        }
+        return; // Stop processing further for this message
       }
     }
 
