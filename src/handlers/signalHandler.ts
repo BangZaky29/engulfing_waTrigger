@@ -1,5 +1,5 @@
 import { enqueueWaMessage } from '../services/outboxService';
-import { GROUP_JID, PRIVATE_JID, SKIP_SIGNAL } from '../config/env';
+import { GROUP_JID, PRIVATE_JID, SKIP_SIGNAL, GROUP_HEDGING_JID } from '../config/env';
 
 export async function handleEngulfingSignal(payload: any) {
   const signal = payload.new;
@@ -250,5 +250,47 @@ export async function handleEngulfingSignal(payload: any) {
     });
   } catch (error) {
     console.error('Error handling OP message:', error);
+  }
+}
+
+export async function handleIndicatorTrigger(payload: any) {
+  const trigger = payload.new;
+  console.log(`[SCANNER] New indicator trigger detected! ${trigger.symbol} ${trigger.timeframe} ${trigger.pattern_name} ${trigger.direction}`);
+
+  try {
+    const isBuy = trigger.direction === 'BUY';
+    const modeEmoji = isBuy ? '🟢' : '🔴';
+    const tfEmoji = trigger.timeframe.startsWith('M') ? '⏱️' : (trigger.timeframe.startsWith('H') ? '⏳' : '📅');
+    
+    let detailsStr = '';
+    if (trigger.details && typeof trigger.details === 'object') {
+        const d = trigger.details;
+        if (d.streak) detailsStr = `🔥 *Streak:* ${d.streak} candles\n`;
+        if (d.body_pct) detailsStr = `📏 *Body:* ${d.body_pct.toFixed(1)}%\n`;
+    }
+
+    const caption = 
+      `📡 *MULTI-PATTERN SCANNER* 📡\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      `📌 *Pair:* ${trigger.symbol}\n` +
+      `${tfEmoji} *Timeframe:* ${trigger.timeframe}\n` +
+      `📊 *Pattern:* ${trigger.pattern_name}\n` +
+      `📈 *Direction:* ${modeEmoji} ${trigger.direction}\n` +
+      `${detailsStr}` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      `_Tanya Bro Ai untuk analisa lebih lanjut._`;
+
+    await enqueueWaMessage({
+      sourceTable: 'indicator_triggers',
+      sourceId: trigger.id,
+      ticketId: null,
+      eventType: 'INDICATOR_INFO',
+      groupJid: GROUP_HEDGING_JID, // Kirim ke grup Hedging AI
+      messageType: 'TEXT',
+      message: caption,
+      payload: trigger,
+    });
+  } catch (error) {
+    console.error('Error handling indicator trigger:', error);
   }
 }

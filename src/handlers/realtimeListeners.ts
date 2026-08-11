@@ -1,6 +1,6 @@
 import { supabase } from '../services/supabaseClient';
 import { isWaReady, sock, clearAuthState, resetIsFirstConnect, resetListenersRegistered, resetGlobalAuthState } from '../services/waSocket';
-import { handleEngulfingSignal } from './signalHandler';
+import { handleEngulfingSignal, handleIndicatorTrigger } from './signalHandler';
 import { handleActiveLog } from './activeLogHandler';
 import { handleTradeResult } from './tradeResultHandler';
 
@@ -114,4 +114,16 @@ export async function setupSupabaseListeners() {
     });
 
   console.log('[LISTENER] ✅ Semua Supabase Realtime listeners diinisialisasi.');
+  // Listen to indicator_triggers
+  supabase
+    .channel('indicator_triggers_changes')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'indicator_triggers' }, handleIndicatorTrigger)
+    .subscribe((status: string) => {
+      console.log(`[LISTENER] indicator_triggers_changes subscription status: ${status}`);
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[LISTENER] ❌ Gagal subscribe ke indicator_triggers!');
+        scheduleListenerRetry('indicator_triggers_changes');
+      }
+    });
+
 }

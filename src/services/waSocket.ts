@@ -165,10 +165,16 @@ export async function connectToWhatsApp() {
     if (GROUP_HEDGING_JID && msg.key.remoteJid === GROUP_HEDGING_JID) {
       if (text.toLowerCase().includes('ai') || text.toLowerCase().includes('bro ai')) {
         console.log(`[WA_AI] Menerima pertanyaan dari ${pushName} di Group Hedging: ${text}`);
-        await sock.sendMessage(GROUP_HEDGING_JID, { text: '⏳ *Bro AI sedang menganalisa data market & posisi...*' });
+        
+        const lowerText = text.toLowerCase();
+        const needsDeepAnalysis = lowerText.includes('analisa') || lowerText.includes('cek') || lowerText.includes('posisi') || lowerText.includes('nyangkut') || lowerText.includes('recovery');
+        
+        if (needsDeepAnalysis) {
+            await sock.sendMessage(GROUP_HEDGING_JID, { text: '⏳ *Bro AI sedang menganalisa data market & posisi secara mendalam...*' });
+        }
         
         try {
-          const aiResponse = await handleAiQuery(text, supabase);
+          const aiResponse = await handleAiQuery(text, supabase, needsDeepAnalysis);
           await sock.sendMessage(GROUP_HEDGING_JID, { text: aiResponse });
         } catch (e) {
           console.error('[WA_AI] Error:', e);
