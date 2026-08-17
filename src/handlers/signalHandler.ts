@@ -226,7 +226,8 @@ export async function handleEngulfingSignal(payload: any) {
                 `💡 *Sesi:* ${signal.trading_session || '-'}\n` +
                 `----------------------------------\n` +
                 (ticketLine ? `${ticketLine}` : '') +
-                `⚠️ _Harap gunakan manajemen risiko yang baik_`;
+                `⚠️ _Harap gunakan manajemen risiko yang baik_\n\n` +
+                `🏷️ *AKUN:* ACC3 (Headway_Demo_3 | 5597691) | *BOT:* MALING`;
           }
 
         } catch (e) {
