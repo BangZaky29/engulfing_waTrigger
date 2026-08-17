@@ -161,6 +161,74 @@ export async function connectToWhatsApp() {
       }
     }
 
+    // Cek Request Cek Kondisi Device / Task Manager (On-Demand dari User)
+    const lowerText = text.trim().toLowerCase();
+    const isDeviceHealthQuery = lowerText.includes('cek kondisi device') 
+      || lowerText.includes('kondisi device') 
+      || lowerText.includes('cek device') 
+      || lowerText.includes('status device')
+      || lowerText.includes('task manager')
+      || lowerText.includes('kondisi laptop')
+      || lowerText.includes('kondisi vps')
+      || lowerText.includes('cek ram')
+      || lowerText.includes('cek cpu')
+      || ((lowerText.includes('bro ai') || lowerText.includes('ai')) && (lowerText.includes('device') || lowerText.includes('laptop') || lowerText.includes('perangkat') || lowerText.includes('overload') || lowerText.includes('hardware')));
+
+    // Cek Request Analisa File Besar / Disk Storage (On-Demand 1x per chat)
+    const isLargeFileScanQuery = lowerText.includes('file besar')
+      || lowerText.includes('cek file')
+      || lowerText.includes('cek disk')
+      || lowerText.includes('cek storage')
+      || lowerText.includes('scan storage')
+      || lowerText.includes('scan disk')
+      || lowerText.includes('analisa storage')
+      || lowerText.includes('analisa disk')
+      || lowerText.includes('analisa file')
+      || lowerText.includes('disk penuh')
+      || lowerText.includes('storage penuh')
+      || ((lowerText.includes('bro ai') || lowerText.includes('ai')) && (lowerText.includes('file') || lowerText.includes('drive') || lowerText.includes('harddisk') || lowerText.includes('storage') || lowerText.includes('penuh')));
+
+    if (isLargeFileScanQuery) {
+      console.log(`[WA_DISK] Menerima request Analisa File Besar dari ${pushName} (${sender})`);
+      await sock.sendMessage(msg.key.remoteJid, { 
+        text: `🔍 *[BRO AI - DISK ANALYZER]* 🔍\n\nSedang memindai seluruh drive lokal (C:\\, D:\\, dll.) untuk mendeteksi file & folder terbesar...\n\n_Mohon tunggu sebentar (sekitar 5-10 detik), laporan lengkap akan segera dikirim._ ⏳` 
+      });
+
+      try {
+        await supabase.from('taskmanager_commands').insert({
+          command: 'SCAN_LARGE_FILES',
+          target_jid: msg.key.remoteJid,
+          status: 'PENDING'
+        });
+      } catch (e: any) {
+        console.error('[WA_DISK] Error enqueue taskmanager_commands:', e);
+      }
+      return; // Stop processing so it doesn't fall into other handlers
+    }
+
+    if (isDeviceHealthQuery) {
+      console.log(`[WA_DEVICE] Menerima request Cek Kondisi Device dari ${pushName} (${sender})`);
+      try {
+        const { data, error } = await supabase
+          .from('device_health_status')
+          .select('*')
+          .eq('id', 'main_device')
+          .single();
+
+        if (data && data.formatted_summary) {
+          await sock.sendMessage(msg.key.remoteJid, { text: `🤖 *[BRO AI - KONDISI PERANGKAT]* 🤖\n\n${data.formatted_summary}` });
+        } else {
+          await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *[BRO AI]* Data kondisi perangkat belum tersedia di database.\n\nPastikan Task Manager sedang berjalan di terminal:\n\`\`\`cd C:\\codingVibes\\mt5\\taskmanager && python main.py\`\`\`` 
+          });
+        }
+      } catch (e: any) {
+        console.error('[WA_DEVICE] Error query device_health_status:', e);
+        await sock.sendMessage(msg.key.remoteJid, { text: '❌ Waduh bro, gagal mengambil status device dari database. Pastikan Task Manager sedang aktif ya! 💻' });
+      }
+      return; // Stop processing so it doesn't fall into other handlers
+    }
+
     // Cek Pesan Grup Hedging (Gemini AI)
     if (GROUP_HEDGING_JID && msg.key.remoteJid === GROUP_HEDGING_JID) {
       if (text.toLowerCase().includes('ai') || text.toLowerCase().includes('bro ai')) {
