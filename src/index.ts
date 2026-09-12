@@ -8,6 +8,7 @@ import { SESSION_ID, PRIVATE_JID } from './config/env';
 import { setupSupabaseListeners } from './handlers/realtimeListeners';
 import { delay } from './utils/helpers';
 import { AiContextCache } from './services/aiContextCache';
+import { syncForexFactoryCalendar } from './services/forexFactoryService';
 
 // ✅ Catat TEPAT saat sistem pertama kali dijalankan
 export const SESSION_START_TIME = new Date();
@@ -20,6 +21,11 @@ setOnSocketReady(async () => {
   // Load AI cache dari Supabase saat WA siap
   const aiCache = AiContextCache.getInstance();
   await aiCache.loadFromSupabase(supabase);
+
+  // Initial sync Forex Factory Calendar saat startup
+  syncForexFactoryCalendar().catch(err => {
+    console.warn('[FF_SERVICE] Startup sync error:', err?.message || err);
+  });
 });
 connectToWhatsApp();
 setInterval(() => {
