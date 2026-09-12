@@ -1,4 +1,4 @@
-import { connectToWhatsApp, heartbeatInterval, INSTANCE_ID, sock, waConnectionState, setOnSocketReady } from './services/waSocket';
+import { connectToWhatsApp, heartbeatInterval, INSTANCE_ID, sock, waConnectionState, setOnSocketReady, SESSION_START_TIME } from './services/waSocket';
 import { processOutbox } from './services/outboxService';
 import { sendShutdownMessage } from './handlers/systemHandler';
 import { generateAndSendPDF } from './services/pdfReportService';
@@ -10,8 +10,7 @@ import { delay } from './utils/helpers';
 import { AiContextCache } from './services/aiContextCache';
 import { syncForexFactoryCalendar } from './services/forexFactoryService';
 
-// ✅ Catat TEPAT saat sistem pertama kali dijalankan
-export const SESSION_START_TIME = new Date();
+export { SESSION_START_TIME };
 
 // =====================================================
 // Bootstrap — connectToWhatsApp & Outbox Polling Worker

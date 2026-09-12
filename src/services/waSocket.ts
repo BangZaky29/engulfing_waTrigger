@@ -13,8 +13,8 @@ import { startAllCronJobs } from '../cron/cronManager';
 import { processOutbox } from './outboxService';
 import { sendStartupMessage } from '../handlers/systemHandler';
 import { generateAndSendPDF } from './pdfReportService';
-import { SESSION_START_TIME } from '../index';
 
+export const SESSION_START_TIME = new Date();
 export let sock: any = null;
 export let waConnectionState = 'close';
 export let clearAuthState: (() => Promise<void>) | null = null;
