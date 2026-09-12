@@ -284,7 +284,7 @@ export async function handleIndicatorTrigger(payload: any) {
     await enqueueWaMessage({
       sourceTable: 'indicator_triggers',
       sourceId: trigger.id,
-      ticketId: null,
+      ticketId: undefined,
       eventType: 'INDICATOR_INFO',
       groupJid: GROUP_HEDGING_JID, // Kirim ke grup Hedging AI
       messageType: 'TEXT',

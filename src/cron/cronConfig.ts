@@ -38,4 +38,26 @@ export const CRON_CONFIG = {
     enabled: false,                   // ⛔ DISABLED — aktifkan di production
     schedule: '0 4 * * *',           // Jam 04:00 WIB — trading window CLOSE
   },
+
+  // ========== FOREX FACTORY & GOLD/USD JOBS ==========
+
+  FF_CALENDAR_SYNC: {
+    enabled: true,                   // Sinkronisasi data kalender FairEconomy
+    schedule: '0 */2 * * *',         // Setiap 2 jam sekali
+  },
+
+  FF_DAILY_BRIEFING: {
+    enabled: true,                   // Briefing harian Forex Factory & Gold/USD
+    schedule: '30 6 * * 1-5',        // Senin - Jumat pukul 06:30 WIB
+  },
+
+  FF_PRE_NEWS_ALERT: {
+    enabled: true,                   // Alert flash 15-20 menit sebelum High Impact
+    schedule: '*/5 * * * 1-5',       // Polling setiap 5 menit (Senin - Jumat)
+  },
+
+  FF_MONTHLY_CALENDAR: {
+    enabled: true,                   // Dokumen PDF Kalender Bulanan
+    schedule: '0 7 1 * *',           // Tanggal 1 setiap bulan pukul 07:00 WIB
+  },
 } as const;

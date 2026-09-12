@@ -163,7 +163,7 @@ export async function connectToWhatsApp() {
 
     // Cek Request Cek Kondisi Device / Task Manager (On-Demand dari User)
     const lowerText = text.trim().toLowerCase();
-    const isDeviceHealthQuery = lowerText.includes('cek kondisi device') 
+    const isDeviceHealthQuery = false; /* Fitur dimatikan sementara: lowerText.includes('cek kondisi device') 
       || lowerText.includes('kondisi device') 
       || lowerText.includes('cek device') 
       || lowerText.includes('status device')
@@ -172,7 +172,7 @@ export async function connectToWhatsApp() {
       || lowerText.includes('kondisi vps')
       || lowerText.includes('cek ram')
       || lowerText.includes('cek cpu')
-      || ((lowerText.includes('bro ai') || lowerText.includes('ai')) && (lowerText.includes('device') || lowerText.includes('laptop') || lowerText.includes('perangkat') || lowerText.includes('overload') || lowerText.includes('hardware')));
+      || ((lowerText.includes('bro ai') || lowerText.includes('ai')) && (lowerText.includes('device') || lowerText.includes('laptop') || lowerText.includes('perangkat') || lowerText.includes('overload') || lowerText.includes('hardware'))); */
 
     // Cek Request Analisa File Besar / Disk Storage (On-Demand 1x per chat)
     const isLargeFileScanQuery = lowerText.includes('file besar')

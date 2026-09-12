@@ -34,3 +34,6 @@ export const SESSION_ID = 'main_session';
 export const GROUP_HEDGING_JID = "120363428247734021@g.us";
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+// Forex Factory Group
+export const GROUP_FOREX_FACTORY_JID = process.env.GROUP_FOREX_FACTORY_JID || "120363429816923352@g.us";

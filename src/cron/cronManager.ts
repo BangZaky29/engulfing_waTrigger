@@ -14,6 +14,10 @@ import weeklyReportJob from './jobs/weeklyReport.job';
 import monthlyReportJob from './jobs/monthlyReport.job';
 import yearlyReportJob from './jobs/yearlyReport.job';
 import { botTradingOpenNotifJob, botTradingCloseNotifJob } from './jobs/botScheduleNotifier.job';
+import ffCalendarSyncJob from './jobs/ffCalendarSync.job';
+import ffDailyBriefingJob from './jobs/ffDailyBriefing.job';
+import ffPreNewsAlertJob from './jobs/ffPreNewsAlert.job';
+import ffMonthlyCalendarJob from './jobs/ffMonthlyCalendar.job';
 
 /**
  * Kumpulkan semua job definitions dari folder jobs/.
@@ -33,6 +37,12 @@ function getAllJobs(): CronJobDefinition[] {
     // Bot Schedule Notifier (disabled by default)
     botTradingOpenNotifJob,
     botTradingCloseNotifJob,
+
+    // Forex Factory & Gold/USD Jobs
+    ffCalendarSyncJob,
+    ffDailyBriefingJob,
+    ffPreNewsAlertJob,
+    ffMonthlyCalendarJob,
   ];
 }
 
